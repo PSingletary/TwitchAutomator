@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "arcanis.vscode-zipfs",
+    "dbaeumer.vscode-eslint",
+    "lokalise.i18n-ally",
+    "Gruntfuggly.todo-tree"
+  ]
+}

@@ -1,0 +1,39 @@
+name: Check Client
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - "client-vue/**"
+  pull_request:
+    branches: 
+      - master
+      - develop-ts
+    paths:
+      - "client-vue/**"
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: "true"
+      - name: Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm install -g yarn    
+      - name: yarn install, lint and build
+        run: | 
+          cd ./twitch-vod-chat
+          yarn install --immutable --immutable-cache
+          yarn buildlib
+          cd ../client-vue
+          yarn install --immutable --immutable-cache
+          yarn lint
+          yarn test
+          yarn build

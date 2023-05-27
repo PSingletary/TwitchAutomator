@@ -10,35 +10,72 @@
     justify-content: center;
     align-items: center;
     cursor: pointer;
+
     .modal-box__container {
         width: 100%;
         max-width: 800px;
         max-height: 90vh;
-        overflow-y: scroll;
-        background: #fff;
+        background: var(--modal-background-color);
         border-radius: 5px;
-        padding: 20px;
-        cursor: default;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        // padding: 20px;
+        cursor: auto;
+        box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+
         .modal-box__header {
+            padding: 1em 1.5em;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background-color: #2b61d6;
+
             .modal-box__title {
-                font-size: 20px;
+                font-size: 1.5em;
                 font-weight: bold;
+                color: #fff;
                 // color: #333;
             }
+
             .modal-box__close {
                 cursor: pointer;
-                i {
-                    font-size: 20px;
-                    color: #333;
-                }
+                color: #fff;
+                font-size: 1.2em;
             }
         }
+
         .modal-box__body {
+            overflow-y: scroll;
             padding: 20px;
             // color: #444;
         }
+    }
+}
+
+.modal-transition-enter-active {
+    transition: all 0.3s ease-out;
+    .modal-box__container {
+        transition: all 0.3s;
+        // bounce
+        transition-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+}
+
+.modal-transition-leave-active {
+    transition: all 0.3s cubic-bezier(1, 0.5, 0.8, 1);
+    .modal-box__container {
+        // reverse bounce
+        transition: all 0.3s;
+        transition-timing-function: cubic-bezier(1.275, 0.32, 0.885, 0.175);
+    }
+}
+
+.modal-transition-enter-from,
+.modal-transition-leave-to {
+    opacity: 0;
+    .modal-box__container {
+        transform: scale(0.5);
+        // transform: translateX(20px);
     }
 }

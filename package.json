@@ -1,24 +1,21 @@
 {
-  "name": "twitchautomator",
-  "version": "6.1.0",
-  "description": "Twitch VOD automator fluff",
+  "name": "livestreamdvr",
+  "version": "1.0.0",
+  "repository": "https://github.com/MrBrax/LiveStreamDVR.git",
+  "author": "braxen et al",
+  "license": "MIT",
+  "private": true,
+  "workspaces": [
+    "client-vue",
+    "server",
+    "twitch-chat-dumper",
+    "twitch-vod-chat"
+  ],
+  "packageManager": "yarn@3.2.4",
   "scripts": {
-    "serve:server": "php -S localhost:8080 -t public",
-    "test:server": "php vendor/phpunit/phpunit/phpunit tests"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/MrBrax/TwitchAutomator.git"
-  },
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/MrBrax/TwitchAutomator/issues"
-  },
-  "homepage": "https://github.com/MrBrax/TwitchAutomator#readme",
-  "devDependencies": {},
-  "dependencies": {},
-  "require": {
-    "php": ">=7.4"
+    "installall": "yarn workspaces foreach --verbose install",
+    "buildall": "yarn workspaces foreach --verbose run build",
+    "start": "yarn workspace livestreamdvr-server start",
+    "testall": "yarn workspaces foreach --verbose run test"
   }
 }

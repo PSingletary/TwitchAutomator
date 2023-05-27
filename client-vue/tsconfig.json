@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "esnext",
     "module": "esnext",
+    "noImplicitThis": true,
     "strict": true,
     "jsx": "preserve",
     "importHelpers": true,
@@ -9,21 +10,25 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "useDefineForClassFields": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "preserveValueImports": true,
+    "importsNotUsedAsValues": "error",
     "sourceMap": true,
     "baseUrl": ".",
-    "types": [
-      "webpack-env"
-    ],
     "paths": {
       "@/*": [
         "src/*"
-      ]
+      ],
+      "@common/*": [
+        "../common/*"
+      ],
     },
     "lib": [
       "esnext",
       "dom",
       "dom.iterable",
-      "scripthost"
     ]
   },
   "include": [
@@ -31,9 +36,12 @@
     "src/**/*.tsx",
     "src/**/*.vue",
     "tests/**/*.ts",
-    "tests/**/*.tsx"
+    "tests/**/*.tsx",
+    "test/**/*.ts",
+    "test/**/*.tsx",
   ],
   "exclude": [
     "node_modules"
-  ]
+  ],
+  "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -1,0 +1,376 @@
+{
+  "dashboard": {
+    "recorded_vods": "Recorded VODs",
+    "logs": "Logs",
+    "motd": "MOTD"
+  },
+  "vods": "{count} VOD | {count} VODs",
+  "messages": {
+    "subscribed": "Subscribed",
+    "no_vods": "No VODs",
+    "clips": "Clips",
+    "video_download_help": "Videos downloaded with this tool will be cleaned up the same way as captured vods do when a stream is finished.\n They are treated the same way as captured vods in its entirety.",
+    "loading": "Loading...",
+    "changing-values-here-will-most-likely-require-a-restart": "Changing values here will most likely require a restart.",
+    "this-is-a-bad-idea-if-any-of-your-channels-are-live": "This is a bad idea if any of your channels are live.",
+    "login-mismatch-fixing": "Login mismatch, fixing",
+    "login": "You need to be logged in to view this resource.",
+    "local-videos": "Local videos",
+    "none": "None",
+    "loading-takes-longer-than-expected": "Loading takes longer than expected..."
+  },
+  "vod": {
+    "add_comment": "Add a comment",
+    "video-info": {
+      "general": "General",
+      "capture": "Capture",
+      "webhook-duration": "Webhook duration",
+      "created": "Created",
+      "went-live": "Went live",
+      "capture-launched": "Capture launched",
+      "wrote-file": "Wrote file",
+      "stream-end": "Stream end",
+      "capture-start": "Capture start",
+      "conversion-start": "Conversion start",
+      "missing-from-captured-file": "Missing from captured file",
+      "chat-downloaded": "Chat downloaded",
+      "chat-dumped": "Chat dumped",
+      "chat-rendered": "Chat rendered",
+      "chat-burned": "Chat burned",
+      "duration": "Duration",
+      "id": "ID",
+      "date": "Date",
+      "title": "Title",
+      "is-muted": "Is muted",
+      "downloaded": "Downloaded",
+      "vod-is-deleted": "VOD is deleted",
+      "the-vod-probably-never-got-saved": "The VOD probably never got saved.",
+      "vod-has-not-been-checked": "VOD has not been checked",
+      "export-data": {
+        "title": "Export data",
+        "exported-at": "Exported at",
+        "youtube-id": "YouTube ID",
+        "youtube-playlist-id": "YouTube Playlist ID",
+        "exporter": "Exporter"
+      },
+      "capture-id": "Capture ID",
+      "duration-difference": "Full duration is {full} while video duration is {dur}, a capture difference of {diff} has been detected.",
+      "twitch-duration-difference": "Twitch duration is {full} while video duration is {dur}, a capture difference of {diff} has been detected.",
+      "stream-pauses": "Stream pauses"
+    },
+    "segments": "Segments",
+    "controls": {
+      "editor": "Editor",
+      "player": "Player",
+      "archive": "Archive",
+      "download-chat": "Download chat",
+      "download-vod": "Download VOD",
+      "check-mute": "Check mute",
+      "render-menu": "Render menu",
+      "fix-issues": "Fix issues",
+      "download-vod-muted": "Download muted VOD",
+      "refresh-metadata": "Refresh metadata"
+    },
+    "chapters": {
+      "offset": "Offset",
+      "started": "Time started",
+      "duration": "Duration",
+      "category": "Category",
+      "title": "Title",
+      "viewers": "Viewers",
+      "end": "END",
+      "ongoing": "ONGOING",
+      "ended": "Ended"
+    },
+    "failed": "Capturing failed",
+    "fetch-vod-list": "Fetch vod list",
+    "capture-has-been-running-for-over-24-hours-streamlink-does-not-support-this-is-the-capture-stuck": "Capture has been running for over 24 hours, streamlink does not support this. Is the capture stuck?",
+    "edit": {
+      "comment": "Comment",
+      "stream-number": "Stream number",
+      "prevent-deletion": "Prevent deletion",
+      "edit-vod": "Edit VOD",
+      "segments": "Segments",
+      "template": "Template",
+      "rename-vod": "Rename VOD",
+      "absolute-season": "Absolute season",
+      "cloud-storage": "Cloud storage",
+      "chapters": "Chapters",
+      "reset-chapters": "Reset chapters",
+      "edit-chapters": "Edit chapters",
+      "edit-chapters-warning": "Editing chapters can cause loss of data. Back up the JSON if you want to be sure.",
+      "absolute-stream-number": "Absolute stream number"
+    },
+    "export": {
+      "title-template": "Title template",
+      "export-type": "Exporter",
+      "directory": "Directory",
+      "host": "Host",
+      "username": "Username",
+      "description": "Description",
+      "category": "Category",
+      "tags": "Tags",
+      "tags-help": "Separate by commas",
+      "file-name": "File name",
+      "file-source": "File source",
+      "no-segments": "The VOD does not have any segments",
+      "privacy": "Privacy",
+      "privacy-public": "Public",
+      "privacy-unlisted": "Unlisted",
+      "privacy-private": "Private",
+      "title": "Title",
+      "password": "Password",
+      "password-help": "Passwords in FTP are sent unencrypted in clear text.",
+      "remote": "Remote",
+      "privacy-help": "By default, only privacy uploads are supported.",
+      "playlist": "Playlist",
+      "playlist-help": "Raw playlist ID, not the URL",
+      "get-playlists": "Get playlists",
+      "create-playlist": "Create playlist",
+      "get-remotes": "Get remotes"
+    },
+    "bookmarks": "Bookmarks",
+    "buttons": {
+      "download-with": "Download with {0}"
+    },
+    "rename": {
+      "current-name-vod-basename": "Current name: {0}"
+    },
+    "fetch-clip-list": "Fetch clip list",
+    "block": {
+      "chapters": "Chapters"
+    },
+    "blocks": {
+      "viewers": "Viewers"
+    }
+  },
+  "buttons": {
+    "save": "Save",
+    "save-favourites": "Save Favourites",
+    "delete": "Delete",
+    "subscribe": "Subscribe",
+    "rename": "Rename",
+    "delete-all": "Delete all",
+    "create": "Create",
+    "edit": "Edit",
+    "reset": "Reset",
+    "execute": "Execute",
+    "download": "Download",
+    "delete-all-vods": "Delete all VODs",
+    "fetch": "Fetch",
+    "export": "Export",
+    "checkstatus": "Check status",
+    "authenticate": "Authenticate",
+    "logout": "Log out",
+    "destroy-session": "Destroy session",
+    "check-subscriptions": "Check subscriptions",
+    "refresh": "Refresh",
+    "delete-segments": "Delete segments",
+    "delete-segment": "Delete segment",
+    "download-config": "Download config",
+    "upload-config": "Upload config",
+    "sync-down": "Sync down",
+    "sync-up": "Sync up",
+    "unsubscribe": "Unsubscribe"
+  },
+  "pages": {
+    "favourite-games": "Favourite games",
+    "channels": "Channels",
+    "new-channel": "New channel",
+    "config": "Config",
+    "keyvalue": "KeyValue",
+    "notifications": "Notifications",
+    "client-settings": "Client settings",
+    "about": "About",
+    "dashboard": "Dashboard",
+    "files": "Files",
+    "tools": "Tools",
+    "settings": "Settings",
+    "tips": "Tips & Help"
+  },
+  "forms": {
+    "channel": {
+      "login": "Login",
+      "login_help": "Channel login, lowercase. This is the part that comes after the domain name, not the display name.\n You can paste a link to a channel page here to get the login.",
+      "quality": "Quality",
+      "match-keywords": "Match keywords",
+      "add-channel": "Add channel",
+      "download-chat": "Download chat after video capture is complete",
+      "live-chat-download": "Live chat download",
+      "burn-chat": "Burn chat after downloading",
+      "no-capture": "Don't record streams (disable capture completely)",
+      "live-channels-warning": "Live channels will not be recorded until they are live the next time.",
+      "no-cleanup": "Don't clean up VODs after recording is finished",
+      "check": "Check",
+      "quality-help-example": "Separate by spaces, e.g. best 1080p60 720p60 1080p 480p audio_only",
+      "quality-help-warning": "If the stream does not use any of these, it will not be recorded. Place \"best\" at the end to make sure.",
+      "quality-help-choices": "Valid choices: {0}",
+      "login-does-not-exist": "The channel {0} does not exist.",
+      "max-storage": "Max storage",
+      "max-storage-help": "In gigabytes, how many will be kept when cleaning up. 0 to inherit from settings.",
+      "max-vods": "Max VODs",
+      "max-vods-help": "Amount of VODs to keep when cleaning up. 0 to inherit from settings.",
+      "download_vod_at_end": "Download VOD at end of capture/stream end",
+      "download_vod_at_end_quality": "Quality for download",
+      "download_vod_at_end_quality_help": "Use 'best' if unsure.",
+      "quality-help-check": "It is recommended to place \"best\" or \"worst\" at the end to make the stream capture just in case.",
+      "provider": "Provider",
+      "id": "ID",
+      "uuid": "UUID",
+      "id_help": "ID can be retrieved from external services. It is NOT the one in the URL of the channel.",
+      "url": "URL",
+      "uses-default-settings-defined-in-the-settings": "Uses default settings defined in the settings"
+    },
+    "config": {
+      "validate-external-url": "Validate external URL"
+    },
+    "keyvalue": {
+      "key": "Key",
+      "value": "Value"
+    },
+    "favourites": {
+      "no-games-in-cache-when-streamers-change-games-they-will-be-added-to-the-cache": "No games in cache. When streamers change games, they will be added to the cache.",
+      "display-as-grid": "Display as grid"
+    }
+  },
+  "views": {
+    "dashboard": {
+      "total-size": "Total size: {0}",
+      "free-space": "Free space: {0}"
+    },
+    "files": {
+      "folders": {
+        "clips": "Clips",
+        "archived-vods": "Archived VODs",
+        "application-logs": "Application logs",
+        "software-logs": "Software logs"
+      }
+    },
+    "tools": {
+      "vod-download": "VOD download",
+      "chat-download": "Chat download",
+      "clip-download": "Clip download",
+      "chat-dump": "Chat dump",
+      "current-jobs": "Current jobs",
+      "reset-channels": "Reset channels",
+      "system": "System",
+      "shutdown": "Shut down",
+      "build-client": "Build client"
+    },
+    "editor": {
+      "buttons": {
+        "play": "Play",
+        "pause": "Pause",
+        "mark-in": "Mark in",
+        "mark-out": "Mark out",
+        "add-bookmark": "Add Bookmark",
+        "submit-cut": "Submit cut",
+        "fullscreen": "Fullscreen",
+        "step-back": "Step back",
+        "step-forward": "Step forward",
+        "preview": "Preview"
+      },
+      "time-in": "Time In",
+      "time-out": "Time Out",
+      "filesize": "Filesize",
+      "edit-segment": "Edit segment",
+      "confirm-cutpoints": "Do you want to overwrite the current cut points?"
+    },
+    "settings": {
+      "new_and_interesting": "New & Interesting"
+    }
+  },
+  "components": {
+    "filemanager": {
+      "these-files-are-not-downloadable-due-to-a-config-setting": "These files are not downloadable due to a config setting.",
+      "name": "Name",
+      "size": "Size",
+      "last-modified": "Last modified",
+      "actions": "Actions"
+    },
+    "status": {
+      "connected": "Connected",
+      "connecting": "Connecting...",
+      "disconnected": "Disconnected",
+      "disabled": "Disabled",
+      "refreshing-in-x-seconds": "Refreshing in {0} seconds."
+    }
+  },
+  "jobs": {
+    "no-jobs-running": "No jobs running",
+    "name": "Name",
+    "started-at": "Started at",
+    "pid": "PID",
+    "status": "Status",
+    "progress": "Progress",
+    "time-left": "Time left",
+    "action": "Action",
+    "jobs-running": "{count} jobs running"
+  },
+  "input": {
+    "search": "Search..."
+  },
+  "streamer": {
+    "one-or-more-subscriptions-missing": "One or more subscriptions missing",
+    "no-vods-not-capturing": "No VODs, not capturing",
+    "no-save-vods": "Does not save VODs",
+    "tools": {
+      "video-download": "Video download",
+      "clip-download": "Clip download",
+      "scan-for-vods": "Scan for VODs",
+      "scan-for-local-videos": "Scan for local videos",
+      "export-vods": "Export VODs",
+      "edit-channel": "Edit channel",
+      "abort-record": "Abort record",
+      "force-record": "Force record",
+      "clean-up": "Clean up",
+      "refresh-data": "Refresh data",
+      "expand-collapse-all-vods": "Expand/collapse all vods",
+      "more": "More tools"
+    }
+  },
+  "about": {
+    "installed-utilities": "Installed utilities",
+    "software": "Software",
+    "subscriptions": "Subscriptions",
+    "links": "Links"
+  },
+  "metadata": {
+    "file-duration": "File duration",
+    "dimensions": "Dimensions",
+    "framerate": "Framerate",
+    "total": "Total",
+    "video": "Video",
+    "audio": "Audio",
+    "format": "Format",
+    "general": "General"
+  },
+  "boolean": {
+    "yes": "Yes",
+    "no": "No",
+    "no-data": "No data"
+  },
+  "duration": {
+    "hours": "datetime.hours",
+    "minutes": "datetime.minutes",
+    "seconds": "datetime.seconds"
+  },
+  "render-menu": {
+    "render-chat": "Render chat",
+    "chat-width": "Chat width",
+    "chat-width-must-be-an-even-number": "Chat width must be an even number.",
+    "chat-height": "Chat height",
+    "chat-height-must-be-an-even-number": "Chat height must be an even number.",
+    "video-source": "Video source",
+    "source-captured": "Captured",
+    "source-downloaded": "Downloaded",
+    "chat-source": "Chat source",
+    "font": "Font",
+    "font-size": "Font size",
+    "offset-seconds": "Offset (seconds)",
+    "test-duration-dont-burn-entire-video": "Test duration (don't burn entire video)",
+    "chat-horizontal": "Chat horizontal",
+    "chat-vertical": "Chat vertical",
+    "chat-source-not-available": "No chat source is available"
+  }
+}

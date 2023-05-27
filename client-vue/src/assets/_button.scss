@@ -1,0 +1,216 @@
+.button {
+    $base-bg: #c4e0f3;
+
+    font-family: inherit;
+    font-size: 1em;
+
+    text-decoration: none;
+
+    display: inline-flex;
+    padding: 0.3rem 1rem;
+
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    // min-width: 80px;
+
+    border-radius: 0.3em;
+
+    // box-shadow: 0 2px 3px rgba(0, 0, 0, .2), inset 0 -3px 0 rgba(0, 0, 0, .1);
+    box-shadow: inset 0 -2px 0px rgba(0, 0, 0, 0.05);
+
+    border: 1px solid darken($base-bg, 5%);
+    background-color: $base-bg;
+    color: #333;
+
+    // margin: 1px;
+
+    white-space: nowrap;
+
+    // transition: 0.05s all ease-in-out;
+
+    // text-shadow: 0 1px 2px rgba(0,0,0,.2);
+
+    .icon {
+        margin-right: 0.2em;
+        margin-left: -0.5em;
+        width: 1.5em;
+        height: 1.5em;
+        align-items: center;
+        display: inline-flex;
+        justify-content: center;
+
+        &:first-child:not(:last-child) {
+            margin-left: calc(-.5em - 1px);
+            margin-right: .25em;
+        }
+
+        &:first-child:last-child {
+            margin-left: calc(-.5em - 1px);
+            margin-right: calc(-.5em - 1px);
+        }
+    }
+
+    &:hover {
+        cursor: pointer;
+        color: #111;
+        background-color: darken($base-bg, 5%);
+        border-color: darken($base-bg, 10%);
+        // transform: scale(1.02);
+    }
+
+    &:active {
+        background-color: #aaa;
+    }
+
+    &.is-small {
+        // min-width: 70px;
+        font-size: 0.85em;
+
+        // padding: 3px 6px;
+        .icon {
+            &:first-child:not(:last-child) {
+                margin-left: calc(-.5em - 1px);
+                margin-right: .25em;
+            }
+        }
+    }
+
+    &.is-blue,
+    &.is-info {
+        $base-bg: #5098f7;
+        background-color: $base-bg;
+        border-color: darken($base-bg, 5%);
+        color: #fff;
+
+        &:hover {
+            background-color: darken($base-bg, 5%);
+            border-color: darken($base-bg, 10%);
+        }
+    }
+
+    &.is-confirm,
+    &.is-success {
+        $base-bg: #3db92c;
+        background-color: $base-bg;
+        border-color: darken($base-bg, 5%);
+        color: #fff;
+
+        &:hover {
+            background-color: darken($base-bg, 5%);
+            border-color: darken($base-bg, 10%);
+        }
+
+        &:active {
+            background-color: darken($base-bg, 10%);
+            border-color: darken($base-bg, 15%);
+        }
+    }
+
+    /** @deprecated */
+    &.is-danger,
+    &.color-red {
+        $base-bg: #b35531;
+        background-color: $base-bg;
+        border-color: darken($base-bg, 5%);
+        color: #fff;
+
+        &:hover {
+            background-color: darken($base-bg, 5%);
+            border-color: darken($base-bg, 10%);
+        }
+    }
+
+    &.is-warning {
+        $base-bg: #f7b850;
+        background-color: $base-bg;
+        border-color: darken($base-bg, 5%);
+        color: #fff;
+
+        &:hover {
+            background-color: darken($base-bg, 5%);
+            border-color: darken($base-bg, 10%);
+        }
+    }
+
+    &:disabled {
+        // opacity: 0.5;
+        cursor: not-allowed;
+
+        background-color: #848484;
+        color: #ddd;
+        border-color: #848484;
+
+        &:hover {
+            background-color: #848484;
+            border-color: #848484;
+            // border-color: darken($base-bg, 5%);
+        }
+
+        &:active {
+            transform: none;
+        }
+    }
+
+    &:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px #fff, 0 0 0 4px #5098f7;
+    }
+
+}
+
+.icon-button {
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: inherit;
+    padding: 0;
+    margin: 0;
+
+    &:hover {
+        color: #6598f8;
+    }
+
+    &.white {
+        color: #fff;
+
+        &:hover {
+            color: #ccc;
+            // color: #2f6d68;
+        }
+    }
+
+    &.icon-button-big {
+        font-size: 1.2em;
+        padding: 0.5em 0.8em;
+    }
+
+    &:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px #fff, 0 0 0 4px #5098f7;
+    }
+}
+
+
+.buttons {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+
+    &:not(.no-margin) {
+        .button {
+            margin-bottom: .5rem;
+        }
+    }
+
+    .button:not(:last-child):not(.is-fullwidth),
+    .icon-button:not(:last-child):not(.is-fullwidth) {
+        margin-right: .5rem;
+    }
+
+    &.is-centered {
+        justify-content: center;
+    }
+
+}

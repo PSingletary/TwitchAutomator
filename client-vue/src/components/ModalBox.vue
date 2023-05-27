@@ -1,44 +1,58 @@
 <template>
-    <div class="modal-box" v-if="show" @click.self="show = false">
-        <div class="modal-box__container">
-            <div class="modal-box__header">
-                <div class="modal-box__title">
-                    {{ title }}
-                </div>
-                <div class="modal-box__close" @click="show = false">
-                    <i class="fas fa-times"></i>
+    <teleport to="body">
+        <transition name="modal-transition">
+            <div
+                v-if="show"
+                class="modal-box"
+                @click.self="$emit('close')"
+            >
+                <div
+                    class="modal-box__container"
+                    :style="{ maxWidth: maxWidth }"
+                >
+                    <div class="modal-box__header">
+                        <div class="modal-box__title">
+                            {{ title }}
+                        </div>
+                        <div
+                            class="modal-box__close"
+                            @click="$emit('close')"
+                        >
+                            <font-awesome-icon icon="times" />
+                        </div>
+                    </div>
+                    <div class="modal-box__body">
+                        <slot />
+                    </div>
                 </div>
             </div>
-            <div class="modal-box__body">
-                <slot></slot>
-            </div>
-        </div>
-    </div>
+        </transition>
+    </teleport>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
-export default defineComponent({
-    emits: ["close"],
-    data() {
-        return {
-            show: false,
-        };
+<script lang="ts" setup>
+import { library } from "@fortawesome/fontawesome-svg-core";
+import { faTimes } from "@fortawesome/free-solid-svg-icons";
+library.add(faTimes);
+
+const props = defineProps({
+    title: {
+        type: String,
+        default: "Modal",
     },
-    props: {
-        title: {
-            type: String,
-            default: "Modal",
-        },
-        // show: {
-        //     type: Boolean,
-        //     default: false,
-        // },
+    maxWidth: {
+        type: String,
+        default: "800px",
     },
-    methods: {
-        close() {
-            this.$emit("close");
-        },
+    show: {
+        type: Boolean,
+        default: false,
     },
 });
+
+const emit = defineEmits(["close"]);
+
+function close() {
+    emit("close");
+}
 </script>

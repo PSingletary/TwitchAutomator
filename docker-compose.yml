@@ -2,21 +2,13 @@ version: "3.8"
 services:
   web:
     build: .
-    image: mrbrax/twitchautomator
-    depends_on:
-      - "broker"
+    image: mrbrax/twitchautomator:master
     ports:
       - "8082:8080"
     volumes:
-      - ./config:/var/www/twitchautomator/config
-      - ./cache:/var/www/twitchautomator/cache
-      - ./logs:/var/www/twitchautomator/logs
-      - ./docker/vods:/var/www/twitchautomator/public/vods
-      - ./docker/saved_clips:/var/www/twitchautomator/public/saved_clips
-      - ./docker/saved_vods:/var/www/twitchautomator/public/saved_vods
-  cron:
-    build: ./docker/cron-container/
-    image: mrbrax/twitchautomator:latest-cron
-  broker:
-    build: ./client-broker/
-    image: mrbrax/twitchautomator:latest-broker
+      - ./data:/usr/local/share/twitchautomator/data
+    environment:
+      - NODE_ENV=production
+      - TCD_ENABLE_FILES_API=0
+      - TCD_EXPOSE_LOGS_TO_PUBLIC=0
+      - TCD_MIGRATE_OLD_VOD_JSON=0

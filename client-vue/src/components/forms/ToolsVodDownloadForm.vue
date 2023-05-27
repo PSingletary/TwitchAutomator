@@ -1,117 +1,149 @@
 <template>
-    <form method="POST" @submit="submitForm">
+    <form
+        method="POST"
+        @submit.prevent="submitForm"
+    >
         <div class="field">
-            <label class="label">VOD URL</label>
+            <label
+                class="label"
+                for="voddownload_url"
+            >VOD URL</label>
             <div class="control">
-                <input class="input input-required" type="text" name="url" value="" required />
+                <input
+                    id="voddownload_url"
+                    v-model="formData.url"
+                    class="input"
+                    type="text"
+                    required
+                >
             </div>
         </div>
 
         <div class="field">
-            <label class="label">Quality</label>
+            <label
+                class="label"
+                for="voddownload_quality"
+            >Quality</label>
             <div class="control">
-                <select class="input input-required" name="quality">
-                    <option v-for="quality in twitchQuality" :key="quality">{{ quality }}</option>
-                </select>
+                <div class="select">
+                    <select
+                        id="voddownload_quality"
+                        v-model="formData.quality"
+                        required
+                    >
+                        <option
+                            v-for="quality of VideoQualityArray"
+                            :key="quality"
+                        >
+                            {{ quality }}
+                        </option>
+                    </select>
+                </div>
             </div>
         </div>
 
-        <div class="field">
+        <FormSubmit
+            :form-status="formStatus"
+            :form-status-text="formStatusText"
+        >
             <div class="control">
-                <button class="button is-confirm" type="submit">
-                    <span class="icon"><fa icon="download"></fa></span> Execute
-                </button>
-                <span :class="formStatusClass">{{ formStatusText }}</span>
+                <d-button
+                    color="success"
+                    icon="download"
+                    type="submit"
+                >
+                    {{ t('buttons.execute') }}
+                </d-button>
             </div>
-        </div>
+        </FormSubmit>
 
-        <div class="field" v-if="fileLink">
+        <div
+            v-if="fileLink"
+            class="field"
+        >
             <a :href="fileLink">{{ fileLink }}</a>
         </div>
     </form>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
-
+<script lang="ts" setup>
+import FormSubmit from "@/components/reusables/FormSubmit.vue";
+import { reactive, ref } from "vue";
+import { VideoQualityArray } from "../../../../common/Defs";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
+import { useI18n } from "vue-i18n";
+import axios from "axios";
+import type { ApiResponse } from "@common/Api/Api";
+import type { FormStatus } from "@/twitchautomator";
 library.add(faDownload);
 
-export default defineComponent({
-    name: "ToolsVodDownloadForm",
-    emits: ["formSuccess"],
-    data() {
-        return {
-            formStatusText: "Ready",
-            formStatus: "",
-            fileLink: "",
-        };
-    },
-    methods: {
-        submitForm(event: Event) {
-            const form = event.target as HTMLFormElement;
-            const inputs = new FormData(form);
+const emit = defineEmits(["formSuccess"]);
+const { t } = useI18n();
 
-            this.formStatusText = "Loading...";
-            this.formStatus = "";
-
-            console.log("form", form);
-            console.log("entries", inputs, inputs.entries(), inputs.values());
-
-            this.$http
-                .post(`/api/v0/tools/voddownload`, inputs)
-                .then((response) => {
-                    const json = response.data;
-                    this.formStatusText = json.message;
-                    this.formStatus = json.status;
-                    if (json.status == "OK") {
-                        this.$emit("formSuccess", json);
-                    }
-                    if (json.data && json.data.web_path) {
-                        this.fileLink = json.data.web_path;
-                    }
-                })
-                .catch((err) => {
-                    console.error("form error", err.response);
-                    this.formStatusText = err;
-                    this.formStatus = "ERROR";
-                });
-
-            /*
-            fetch(`api/v0/tools/voddownload`, {
-                method: 'POST',
-                body: inputs
-            })
-            .then((response) => response.json())
-            .then((json) => {
-                this.formStatusText = json.message;
-                this.formStatus = json.status;
-                if(json.status == 'OK'){
-                    this.$emit('formSuccess', json);
-                }
-                if(json.data && json.data.web_path){
-                    this.fileLink = json.data.web_path;
-                }
-            }).catch((err) => {
-                console.error("Error burn form", err);
-                this.formStatusText = err;
-                this.formStatus = 'ERROR';
-            });
-            */
-
-            event.preventDefault();
-            return false;
-        },
-    },
-    computed: {
-        formStatusClass(): Record<string, boolean> {
-            return {
-                "form-status": true,
-                "is-error": this.formStatus == "ERROR",
-                "is-success": this.formStatus == "OK",
-            };
-        },
-    },
+const formStatusText = ref<string>("Ready");
+const formStatus = ref<FormStatus>("IDLE");
+const formData = reactive({
+    url: "",
+    quality: "best",
 });
+const fileLink = ref("");
+
+
+function submitForm(event: Event) {
+    formStatusText.value = t("messages.loading");
+    formStatus.value = "LOADING";
+
+    axios
+        .post<ApiResponse>(`/api/v0/tools/vod_download`, formData)
+        .then((response) => {
+            const json = response.data;
+            formStatusText.value = json.message || "No message";
+            formStatus.value = json.status;
+            if (json.status == "OK") {
+                emit("formSuccess", json);
+            }
+            if (json.data && json.data.web_path) {
+                fileLink.value = json.data.web_path;
+            }
+        })
+        .catch((err) => {
+            console.error("form error", err.response);
+            if (axios.isAxiosError(err) && err.response) {
+                if (err.response.data.status == "ERROR") {
+                    formStatusText.value = err.response.data.message;
+                    formStatus.value = err.response.data.status;
+                } else {
+                    formStatusText.value = err.response.data;
+                    formStatus.value = "ERROR";
+                }
+            }
+        });
+
+    /*
+    fetch(`api/v0/tools/voddownload`, {
+        method: 'POST',
+        body: inputs
+    })
+    .then((response) => response.json())
+    .then((json) => {
+        formStatusText.value = json.message;
+        formStatus.value = json.status;
+        if(json.status == 'OK'){
+            this.$emit('formSuccess', json);
+        }
+        if(json.data && json.data.web_path){
+            this.fileLink = json.data.web_path;
+        }
+    }).catch((err) => {
+        console.error("Error burn form", err);
+        formStatusText.value = err;
+        formStatus.value = 'ERROR';
+    });
+    */
+
+    event.preventDefault();
+    return false;
+    
+}
 </script>

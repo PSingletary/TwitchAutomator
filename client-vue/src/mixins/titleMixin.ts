@@ -1,4 +1,5 @@
-import { ComponentOptionsMixin } from "vue";
+import type { ComponentOptionsMixin } from "vue";
+import { useStore } from "../store";
 
 function getTitle(vm: ComponentOptionsMixin) {
     const { title } = vm.$options;
@@ -10,8 +11,16 @@ function getTitle(vm: ComponentOptionsMixin) {
 export default {
     created() {
         const title = getTitle(this);
+        const store = useStore();
         if (title) {
-            document.title = title + " - TwitchAutomator";
+            /**
+             * TODO: make this reactive, how?
+             */
+            if (store.isAnyoneLive) {
+                document.title = `[${store.channelsOnline}] ${title} - ${store.app_name}`;
+            } else{
+                document.title = `${title} - ${store.app_name}`;
+            }
         }
     },
 };

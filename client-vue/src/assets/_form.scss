@@ -1,0 +1,187 @@
+/*
+.control {
+	padding: 1px 0;
+	// border-bottom: 1px solid #fefefe;
+}
+*/
+
+.control {
+
+    &.has-addon {
+        display: flex;
+        align-items: stretch;
+
+        .button:last-child {
+            margin-left: 0;
+            border-radius: 0 0.5em 0.5em 0;
+            // padding: 0;
+            // flex height auto
+        }
+
+        .button:not(:last-child) {
+            border-radius: 0;
+            // padding: 0;
+            // flex height auto
+        }
+
+        .input {
+            border-radius: 0.5em 0 0 0.5em;
+            margin: 0;
+        }
+
+        div.select {
+            select {
+                border-radius: 0.5em 0 0 0.5em;
+                margin: 0;
+            }
+            flex-grow: 1;
+        }
+    }
+
+}
+
+.control-label {
+    display: block;
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.field-group {
+    &:not(:last-child) {
+        margin-bottom: 5px;
+    }
+    padding: 10px;
+    background-color: var(--field-group-background-color);
+}
+
+.field {
+    &:not(:last-child) {
+        margin-bottom: 1rem;
+    }
+    label {
+        p {
+            margin: 0;
+            padding: 0 0 5px 0;
+            font-weight: 700;
+        }
+    }
+    &.is-horizontal {
+        display: flex;
+        .label {
+            flex-grow: 1;
+            flex-basis: 0;
+            flex-shrink: 0;
+            text-align: right;
+            padding-right: 1em;
+            align-self: center;
+        }
+        .control {
+            flex-grow: 4;
+            flex-basis: 0;
+            flex-shrink: 1;
+        }
+    }
+    .input {
+        // don't allow resizing horizontally
+        resize: vertical;
+    }
+}
+
+.input-help {
+    font-size: 85%;
+    color: var(--input-help);
+    font-style: italic;
+    margin: 0;
+    padding: 0.2em 0 0 0;
+}
+
+.input-secret {
+    font-size: 85%;
+    color: #f05a5a;
+    font-style: italic;
+    margin: 0;
+    padding: 0.2em 0 0 0;
+}
+
+.input-default {
+    font-size: 85%;
+    color: #5d67a4;
+    font-style: italic;
+    margin: 0;
+    padding: 0.2em 0 0 0;
+}
+
+.template-preview {
+    padding: 0.7em 1em;
+    margin: 0.5em 0;
+    background-color: var(--template-preview-background-color);
+    border-radius: 0.5em;
+}
+
+.template-replacements {
+    font-size: 0.8em;
+    padding: 0.2em;
+    margin: 0;
+    display: block;
+    li {
+        display: inline-block;
+        list-style: none;
+        list-style-type: none;
+        margin-right: 1em;
+        button {
+            padding: 0.4em 0.5em;
+            background-color: rgba(128, 128, 128, 0.5);
+            border-radius: 0.5em;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            &:hover {
+                background-color: rgba(128, 128, 128, 0.8);
+            }
+        }
+    }
+}
+
+.label {
+    color: var(--label-color);
+    display: block;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 0.2em;
+}
+
+ul.radio-list {
+    list-style: none;
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    li:not(:last-child) {
+        margin-bottom: 0.5em;
+    }
+    li label {
+        display: block;
+        padding: 0.5em;
+        border-radius: 0.5em;
+        cursor: pointer;
+        background-color: rgba(0, 0, 0, 0.1);
+        
+        &:hover {
+            background-color: rgba(0, 0, 0, 0.15);
+        }
+
+        &:active {
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+        
+        input {
+            margin-right: 0.2em;
+            vertical-align: middle;
+        }
+
+        // no default support for :has in firefox at the moment of writing, holla for the future
+        &:has(input:checked) {
+            background-color: rgba(0, 0, 255, 0.2);
+        }
+    }
+}

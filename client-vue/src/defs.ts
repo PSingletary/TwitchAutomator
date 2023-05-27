@@ -1,33 +1,20 @@
-export const defaultConfig = {
-    useSpeech: false,
-    singlePage: false,
-    enableNotifications: false,
-    animationsEnabled: true,
-    tooltipStatic: false,
-    useRelativeTime: false,
-    showAdvancedInfo: false,
-    useWebsockets: true,
-    useBackgroundRefresh: true,
-    useBackgroundTicker: true,
+import type { SidemenuShow, VideoBlockShow } from "./twitchautomator";
+
+export const defaultSidemenuShow: SidemenuShow = {
+    vod_date: true,
+    vod_sxe: false,
+    vod_sxe_absolute: false,
+    vod_size: true,
+    vod_duration: true,
+    vod_basename: false,
+    vod_icon: true,
+    vod_title: false,
 };
 
-export const nonGameCategories = [
-    "Just Chatting",
-    "IRL",
-    "Art",
-    "Music",
-    "Pools, Hot Tubs, and Beaches",
-    "Sports",
-    "ASMR",
-    "Talk Shows & Podcasts",
-    "Special Events",
-    "Beauty & Body Art",
-    "Animals, Aquariums, and Zoos",
-    "Travel & Outdoors",
-    "Makers & Crafting",
-    "Software and Game Development",
-    "Science & Technology",
-    "Food & Drink",
-    "Politics",
-    "Fitness & Health",
-];
+export const defaultVideoBlockShow: VideoBlockShow = { // TODO: invert name
+    general: false,
+    segments: false,
+    bookmarks: true,
+    chapters: false,
+    viewers: true,
+};
