@@ -52,7 +52,6 @@ export function formatSubtitleDuration(duration_seconds: number) {
 
 // https://stackoverflow.com/a/2510459
 export function formatBytes(bytes: number, precision = 2): string {
-
     const units = ["B", "KB", "MB", "GB", "TB"];
 
     bytes = Math.max(bytes, 0);
@@ -61,12 +60,12 @@ export function formatBytes(bytes: number, precision = 2): string {
 
     // Uncomment one of the following alternatives
     bytes /= Math.pow(1024, pow);
-    // $bytes /= (1 << (10 * $pow)); 
+    // $bytes /= (1 << (10 * $pow));
 
     // return round($bytes, $precision) . ' ' . $units[$pow];
     return `${bytes.toFixed(precision)} ${units[pow]}`;
 }
 
 export function formatBits(bits: number, precision = 2): string {
-    return formatBytes(bits * 8, precision).toLowerCase();
+    return formatBytes(bits * 8, precision).replace(/([a-zA-Z])B/, "$1b");
 }

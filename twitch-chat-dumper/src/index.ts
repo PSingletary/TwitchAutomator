@@ -18,17 +18,40 @@ function main(argv: Record<string, string>): void {
     const userid = argv.userid;
     const date = argv.date;
     const output = argv.output;
+    const help = argv.help || argv.h;
 
     const show_raw = argv.raw;
     const show_chat = argv.showchat;
     const show_commands = argv.showcommands;
     const show_subs = argv.showsubs;
     const show_bans = argv.showbans;
+    const show_fragments = argv.fragments;
 
     const no_color = argv.nocolor;
-    
+
     if (no_color) {
         TwitchChat.chalk.level = 0;
+    }
+
+    if ( help ) {
+        console.log(`
+        Usage: twitch-chat-dumper [options]
+
+        Options:
+        --channel <channel>         Channel to dump chat from
+        --userid <userid>           User ID of channel to dump chat from
+        --date <date>               Start date of chat dump
+        --output <output>           Output file to dump chat to
+        --raw                       Show raw chat
+        --showchat                  Show chat
+        --showcommands              Show commands
+        --showsubs                  Show subs
+        --showbans                  Show bans
+        --fragments                 Show fragments
+        --nocolor                   Disable color output
+        --help                      Show help
+        `);
+        return;
     }
 
     if (channel) {
@@ -98,7 +121,11 @@ function main(argv: Record<string, string>): void {
             try {
                 dumper.startDump(output);
             } catch (error) {
-                console.log(`Could not start dumper: ${(error as Error).message}`)
+                console.error(`Could not start dumper: ${(error as Error).message}`);
+                if (error instanceof Error && error.message.toString().includes('EEXIST')) {
+                    process.exit(1);
+                    return;
+                }
             }
         } else {
             console.log(TwitchChat.chalk.red('No output file specified, only showing chat'));
@@ -115,6 +142,16 @@ function main(argv: Record<string, string>): void {
                     return;
                 }
                 console.log(`${TwitchChat.chalk.red(message.getTime())} <${dumper.channel_login}:${dumper.userCount}>${message.getUser()?.displayBadges()}${message.getFormattedUser()}${message.isAbuse ? '⚠️' : ''}: ${message.getFormattedText()}`);
+            
+                if ( show_fragments ) {
+                    const dumpEntry = dumper.messageToDump(message, dumper.channel_id, 0);
+                    if ( dumpEntry.message.fragments.length > 1 )
+                        console.log(JSON.stringify(dumpEntry.message.fragments, null, 4));
+                }
+
+            });
+            dumper.on("comedy", (total, delta, message) => {
+                console.log(`${TwitchChat.chalk.red(message.getTime())} <${dumper.channel_login}:${dumper.userCount}> ${TwitchChat.chalk.yellow(`Comedy: ${total} (+${delta})`)}`);
             });
         }
 
@@ -156,6 +193,9 @@ function main(argv: Record<string, string>): void {
                 const data = fs.readFileSync(argv.change_offset, 'utf8');
                 const json: TwitchCommentDumpTD = JSON.parse(data);
                 for (const comment of json.comments) {
+                    if ( comment.content_offset_seconds === undefined || comment.content_offset_seconds === null ) {
+                        throw new Error(`Comment ${comment._id} has no offset`);
+                    }
                     comment.content_offset_seconds += parseInt(relative_offset);
                 }
                 fs.writeFileSync(argv.change_offset, JSON.stringify(json));
@@ -167,7 +207,7 @@ function main(argv: Record<string, string>): void {
         }
 
     } else {
-        console.log(TwitchChat.chalk.red('No channel specified'));
+        console.log(TwitchChat.chalk.red('No channel specified (--channel)'));
     }
 
 }

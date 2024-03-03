@@ -2,68 +2,42 @@
     <div :id="`channelupdate_${channel.uuid}`">
         <form @submit.prevent="submitForm">
             <div class="field">
-                <label class="label">{{ t('forms.channel.provider') }}</label>
+                <label class="label">{{ t("forms.channel.provider") }}</label>
                 <div class="control">
-                    <input
-                        class="input input-required"
-                        type="text"
-                        :value="channel.provider"
-                        disabled
-                        readonly
-                    >
+                    <input class="input input-required" type="text" :value="channel.provider" disabled readonly />
                 </div>
             </div>
 
             <div class="field">
-                <label class="label">{{ t('forms.channel.uuid') }}</label>
+                <label class="label">{{ t("forms.channel.uuid") }}</label>
                 <div class="control">
-                    <input
-                        class="input input-required"
-                        type="text"
-                        :value="channel.uuid"
-                        disabled
-                        readonly
-                    >
+                    <input class="input input-required" type="text" :value="channel.uuid" disabled readonly />
                 </div>
             </div>
 
-            <div
-                v-if="'login' in channel"
-                class="field"
-            >
-                <label class="label">{{ t('forms.channel.login') }}</label>
+            <div v-if="'login' in channel" class="field">
+                <label class="label">{{ t("forms.channel.login") }}</label>
                 <div class="control">
-                    <input
-                        class="input"
-                        type="text"
-                        :value="channel.login"
-                        disabled
-                        readonly
-                    >
-                </div>
-            </div>
-
-            <div
-                v-if="'channel_id' in channel"
-                class="field"
-            >
-                <label class="label">{{ t('forms.channel.id') }}</label>
-                <div class="control">
-                    <input
-                        class="input"
-                        type="text"
-                        :value="channel.channel_id"
-                        disabled
-                        readonly
-                    >
+                    <input class="input" type="text" :value="channel.login" disabled readonly />
                 </div>
             </div>
 
             <div class="field">
-                <label
-                    class="label"
-                    :for="`input_${channel.uuid}_quality`"
-                >{{ t('forms.channel.quality') }} <span class="required">*</span></label>
+                <label class="label">{{ t("forms.channel.internal-id") }}</label>
+                <div class="control">
+                    <input class="input" type="text" :value="localChannelData?.internalId" disabled readonly />
+                </div>
+            </div>
+
+            <div v-if="'channel_id' in channel" class="field">
+                <label class="label">{{ t("forms.channel.id") }}</label>
+                <div class="control">
+                    <input class="input" type="text" :value="channel.channel_id" disabled readonly />
+                </div>
+            </div>
+
+            <div class="field">
+                <label class="label" :for="`input_${channel.uuid}_quality`">{{ t("forms.channel.quality") }} <span class="required">*</span></label>
                 <div class="control">
                     <input
                         :id="`input_${channel.uuid}_quality`"
@@ -73,246 +47,143 @@
                         type="text"
                         required
                         name="quality"
-                    >
+                    />
                     <p class="input-help">
-                        {{ t('forms.channel.quality-help-example') }}
+                        {{ t("forms.channel.quality-help-example") }}
                     </p>
                     <p class="input-help">
-                        <strong>{{ t('forms.channel.quality-help-warning') }}</strong>
+                        <strong>{{ t("forms.channel.quality-help-warning") }}</strong>
                     </p>
                     <!--<p class="input-help">{{ t('forms.channel.quality-help-choices', [VideoQualityArray.join(", ")]) }}</p>-->
-                    <p
-                        v-if="!qualityWarning"
-                        class="input-help error"
-                    >
-                        {{ t('forms.channel.quality-help-check') }}
+                    <p v-if="!qualityWarning" class="input-help error">
+                        {{ t("forms.channel.quality-help-check") }}
                     </p>
                 </div>
             </div>
 
             <div class="field">
-                <label
-                    class="label"
-                    :for="`input_${channel.uuid}_match`"
-                >{{ t('forms.channel.match-keywords') }}</label>
+                <label class="label" :for="`input_${channel.uuid}_match`">{{ t("forms.channel.match-keywords") }}</label>
                 <div class="control">
-                    <input
-                        :id="`input_${channel.uuid}_match`"
-                        v-model="formData.match"
-                        class="input"
-                        type="text"
-                        name="match"
-                    >
+                    <input :id="`input_${channel.uuid}_match`" v-model="formData.match" class="input" type="text" name="match" />
+                    <p class="input-help">Separate by commas, e.g. christmas,media share,opening,po box</p>
+                </div>
+            </div>
+
+            <div class="field">
+                <label class="label">{{ t("forms.channel.max-storage") }}</label>
+                <div class="control">
+                    <input v-model="formData.max_storage" class="input" type="number" name="max_storage" />
                     <p class="input-help">
-                        Separate by commas, e.g. christmas,media share,opening,po box
+                        {{ t("forms.channel.max-storage-help") }}
                     </p>
                 </div>
             </div>
 
             <div class="field">
-                <label class="label">{{ t('forms.channel.max-storage') }}</label>
+                <label class="label">{{ t("forms.channel.max-vods") }}</label>
                 <div class="control">
-                    <input
-                        v-model="formData.max_storage"
-                        class="input"
-                        type="number"
-                        name="max_storage"
-                    >
+                    <input v-model="formData.max_vods" class="input" type="number" name="max_vods" />
                     <p class="input-help">
-                        {{ t('forms.channel.max-storage-help') }}
-                    </p>
-                </div>
-            </div>
-
-            <div class="field">
-                <label class="label">{{ t('forms.channel.max-vods') }}</label>
-                <div class="control">
-                    <input
-                        v-model="formData.max_vods"
-                        class="input"
-                        type="number"
-                        name="max_vods"
-                    >
-                    <p class="input-help">
-                        {{ t('forms.channel.max-vods-help') }}
+                        {{ t("forms.channel.max-vods-help") }}
                     </p>
                 </div>
             </div>
 
             <div class="field">
                 <label class="checkbox">
-                    <input
-                        v-model="formData.download_chat"
-                        type="checkbox"
-                        name="download_chat"
-                    >
-                    {{ t('forms.channel.download-chat') }}
+                    <input v-model="formData.download_chat" type="checkbox" name="download_chat" />
+                    {{ t("forms.channel.download-chat") }}
                 </label>
             </div>
 
             <div class="field">
                 <label class="checkbox">
-                    <input
-                        v-model="formData.live_chat"
-                        type="checkbox"
-                        name="live_chat"
-                    >
-                    {{ t('forms.channel.live-chat-download') }}
+                    <input v-model="formData.live_chat" type="checkbox" name="live_chat" />
+                    {{ t("forms.channel.live-chat-download") }}
+                </label>
+                <p class="input-help">Requires Node binary path to be set in the settings</p>
+            </div>
+
+            <div class="field">
+                <label class="checkbox">
+                    <input v-model="formData.burn_chat" type="checkbox" name="burn_chat" />
+                    {{ t("forms.channel.burn-chat") }}
                 </label>
                 <p class="input-help">
-                    Requires Node binary path to be set in the settings
+                    {{ t("forms.channel.uses-default-settings-defined-in-the-settings") }}
                 </p>
             </div>
 
             <div class="field">
                 <label class="checkbox">
-                    <input
-                        v-model="formData.burn_chat"
-                        type="checkbox"
-                        name="burn_chat"
-                    >
-                    {{ t('forms.channel.burn-chat') }}
-                </label>
-                <p class="input-help">
-                    {{ t('forms.channel.uses-default-settings-defined-in-the-settings') }}
-                </p>
-            </div>
-
-            <div class="field">
-                <label class="checkbox">
-                    <input
-                        v-model="formData.no_capture"
-                        type="checkbox"
-                        name="no_capture"
-                    >
-                    {{ t('forms.channel.no-capture') }}
+                    <input v-model="formData.no_capture" type="checkbox" name="no_capture" />
+                    {{ t("forms.channel.no-capture") }}
                 </label>
             </div>
 
             <div class="field">
                 <label class="checkbox">
-                    <input
-                        v-model="formData.no_cleanup"
-                        type="checkbox"
-                        name="no_cleanup"
-                    >
-                    {{ t('forms.channel.no-cleanup') }}
+                    <input v-model="formData.no_cleanup" type="checkbox" name="no_cleanup" />
+                    {{ t("forms.channel.no-cleanup") }}
                 </label>
             </div>
 
             <div class="field">
                 <label class="checkbox">
-                    <input
-                        v-model="formData.download_vod_at_end"
-                        type="checkbox"
-                        name="download_vod_at_end"
-                    >
-                    {{ t('forms.channel.download_vod_at_end') }}
+                    <input v-model="formData.download_vod_at_end" type="checkbox" name="download_vod_at_end" />
+                    {{ t("forms.channel.download_vod_at_end") }}
                 </label>
             </div>
 
-            <div
-                v-if="formData.download_vod_at_end"
-                class="field"
-            >
-                <label class="label">{{ t('forms.channel.download_vod_at_end_quality') }}</label>
+            <div v-if="formData.download_vod_at_end" class="field">
+                <label class="label">{{ t("forms.channel.download_vod_at_end_quality") }}</label>
                 <div class="select">
-                    <select
-                        v-model="formData.download_vod_at_end_quality"
-                        name="download_vod_at_end_quality"
-                    >
-                        <option
-                            v-for="quality in VideoQualityArray"
-                            :key="quality"
-                            :value="quality"
-                        >
-                            {{ quality }}
-                        </option>
-                    </select>
+                    <d-select v-model="formData.download_vod_at_end_quality" name="download_vod_at_end_quality" :options="VideoQualityArray" />
                 </div>
                 <p class="input-help">
-                    {{ t('forms.channel.download_vod_at_end_quality_help') }}
+                    {{ t("forms.channel.download_vod_at_end_quality_help") }}
                 </p>
             </div>
 
-            <FormSubmit
-                :form-status="formStatus"
-                :form-status-text="formStatusText"
-            >
-                <d-button
-                    color="success"
-                    type="submit"
-                    icon="save"
-                >
-                    {{ t('buttons.save') }}
+            <FormSubmit :form-status="formStatus" :form-status-text="formStatusText" :zod-errors="zodErrors">
+                <d-button color="success" type="submit" icon="save">
+                    {{ t("buttons.save") }}
                 </d-button>
-                <d-button
-                    color="danger"
-                    type="button"
-                    icon="sync"
-                    @click="resetForm"
-                >
-                    {{ t('buttons.reset') }}
+                <d-button color="danger" type="button" icon="sync" @click="resetForm">
+                    {{ t("buttons.reset") }}
                 </d-button>
             </FormSubmit>
         </form>
-        <hr>
+        <hr />
         <div class="buttons">
-            <d-button
-                size="small"
-                color="danger"
-                icon="trash"
-                @click="deleteChannel"
-            >
-                {{ t('buttons.delete') }}
+            <d-button size="small" color="danger" icon="trash" @click="deleteChannel">
+                {{ t("buttons.delete") }}
             </d-button>
-            <d-button
-                size="small"
-                color="danger"
-                icon="video-slash"
-                @click="deleteAllVods"
-            >
-                {{ t('buttons.delete-all-vods') }}
+            <d-button size="small" color="danger" icon="video-slash" @click="deleteAllVods">
+                {{ t("buttons.delete-all-vods") }}
             </d-button>
-            <d-button
-                size="small"
-                icon="sync"
-                @click="subscribeChannel"
-            >
-                {{ t('buttons.subscribe') }}
+            <d-button size="small" icon="sync" @click="subscribeChannel">
+                {{ t("buttons.subscribe") }}
             </d-button>
-            <d-button
-                size="small"
-                icon="list"
-                @click="checkSubscriptions"
-            >
-                {{ t('buttons.check-subscriptions') }}
+            <d-button size="small" icon="trash" @click="unsubscribeChannel">
+                {{ t("buttons.unsubscribe") }}
             </d-button>
-            <d-button
-                size="small"
-                icon="pencil"
-                @click="renameChannel"
-            >
-                {{ t('buttons.rename') }}
+            <d-button size="small" icon="list" @click="checkSubscriptions">
+                {{ t("buttons.check-subscriptions") }}
+            </d-button>
+            <d-button size="small" icon="pencil" @click="renameChannel">
+                {{ t("buttons.rename") }}
             </d-button>
         </div>
-        <hr>
+        <hr />
         <div>
             <h2>History</h2>
             <div class="field">
-                <d-button
-                    size="small"
-                    color="success"
-                    icon="sync"
-                    @click="fetchHistory"
-                >
-                    {{ t('buttons.fetch') }}
+                <d-button size="small" color="success" icon="sync" @click="fetchHistory">
+                    {{ t("buttons.fetch") }}
                 </d-button>
             </div>
-            <table
-                v-if="history.length"
-                class="table is-striped"
-            >
+            <table v-if="history.length" class="table is-striped">
                 <thead>
                     <tr>
                         <th>Date</th>
@@ -322,10 +193,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr
-                        v-for="(item, i) in history"
-                        :key="i"
-                    >
+                    <tr v-for="(item, i) in history" :key="i">
                         <template v-if="'action' in item">
                             <td>{{ formatDate(item.time) }}</td>
                             <td>{{ item.action }}</td>
@@ -342,9 +210,7 @@
                 </tbody>
             </table>
             <LoadingBox v-if="loadingHistory" />
-            <div v-if="history.length">
-                <strong>Average start time:</strong> {{ averageOnlineStartTime }}
-            </div>
+            <div v-if="history.length"><strong>Average start time:</strong> {{ averageOnlineStartTime }}</div>
         </div>
     </div>
 </template>
@@ -354,7 +220,7 @@ import FormSubmit from "@/components/reusables/FormSubmit.vue";
 import { formatDate } from "@/mixins/newhelpers";
 import { useStore } from "@/store";
 import type { FormStatus } from "@/twitchautomator";
-import type { ApiResponse } from "@common/Api/Api";
+import type { ApiResponse, ApiErrorResponse } from "@common/Api/Api";
 import type { ApiChannelConfig } from "@common/Api/Client";
 import { VideoQualityArray } from "@common/Defs";
 import type { HistoryEntry, HistoryEntryOnline } from "@common/History";
@@ -363,6 +229,7 @@ import { faList, faPencil, faSave, faTrash, faVideoSlash } from "@fortawesome/fr
 import axios, { AxiosError } from "axios";
 import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import type { ZodError } from "zod";
 library.add(faSave, faList, faTrash, faVideoSlash, faPencil);
 
 // props
@@ -376,11 +243,13 @@ const emit = defineEmits(["formSuccess"]);
 // setup
 const store = useStore();
 const { t } = useI18n();
-        
+
 // data
 const formStatusText = ref<string>("Ready");
 const formStatus = ref<FormStatus>("IDLE");
-const formData = ref({ // ref or reactive?
+const zodErrors = ref<ZodError>();
+const formData = ref({
+    // ref or reactive?
     quality: "",
     match: "",
     download_chat: false,
@@ -408,6 +277,10 @@ const averageOnlineStartTime = computed((): string => {
     const hours = Math.floor(average / 60);
     const minutes = Math.floor(average % 60);
     return `${hours}:${minutes}`;
+});
+
+const localChannelData = computed(() => {
+    return store.streamerList.find((c) => c.uuid == props.channel.uuid);
 });
 
 // watch
@@ -442,8 +315,7 @@ function resetForm() {
 }
 
 function submitForm(event: Event) {
-
-    formStatusText.value = t('messages.loading');
+    formStatusText.value = t("messages.loading");
     formStatus.value = "LOADING";
 
     axios
@@ -458,10 +330,13 @@ function submitForm(event: Event) {
             }
         })
         .catch((err: Error | AxiosError) => {
-            if (axios.isAxiosError(err) && err.response) {
+            if (axios.isAxiosError<ApiErrorResponse>(err) && err.response) {
                 console.error("channel update form error", err.response);
                 formStatusText.value = err.response.data.message;
                 formStatus.value = err.response.data.status;
+                if (err.response.data.zodErrors) {
+                    zodErrors.value = err.response.data.zodErrors;
+                }
             } else {
                 console.error("channel update form error", err);
                 alert(`Error: ${err.message}`);
@@ -476,16 +351,15 @@ function deleteChannel() {
     if (!confirm(`Do you want to delete "${props.channel.login}"? This cannot be undone.`)) return;
 
     const deleteVodsToo = confirm(
-        `Do you also want to delete all VODs for "${props.channel.login}"? OK to delete all VODs and channel, Cancel to delete only the channel.`
+        `Do you also want to delete all VODs for "${props.channel.login}"? OK to delete all VODs and channel, Cancel to delete only the channel.`,
     );
 
     axios
-        .delete(`/api/v0/channels/${props.channel.uuid}`,
-            {
-                params: {
-                    deletevods: deleteVodsToo ? "1" : "0",
-                },
-            })
+        .delete(`/api/v0/channels/${props.channel.uuid}`, {
+            params: {
+                deletevods: deleteVodsToo ? "1" : "0",
+            },
+        })
         .then((response) => {
             const json = response.data;
             if (json.message) alert(json.message);
@@ -502,17 +376,30 @@ function deleteChannel() {
 }
 
 function subscribeChannel() {
-
-    if (
-        (!store.cfg("app_url") || store.cfg("app_url") == "debug") &&
-        store.cfg("twitchapi.twitchapi.eventsub_type") === "webhook"
-    ){
+    if ((!store.cfg("app_url") || store.cfg("app_url") == "debug") && store.cfg("twitchapi.twitchapi.eventsub_type") === "webhook") {
         alert("Please set the app url in the settings");
         return;
     }
 
     axios
         .post<ApiResponse>(`/api/v0/channels/${props.channel.uuid}/subscribe`)
+        .then((response) => {
+            const json = response.data;
+            if (json.message) alert(json.message);
+            console.log(json);
+            emit("formSuccess", json);
+        })
+        .catch((err) => {
+            console.error("form error", err.response);
+            if (err.response.data && err.response.data.message) {
+                alert(err.response.data.message);
+            }
+        });
+}
+
+function unsubscribeChannel() {
+    axios
+        .post<ApiResponse>(`/api/v0/channels/${props.channel.uuid}/unsubscribe`)
         .then((response) => {
             const json = response.data;
             if (json.message) alert(json.message);
@@ -616,9 +503,9 @@ function fetchHistory() {
             if (err.response.data && err.response.data.message) {
                 alert(err.response.data.message);
             }
-        }).finally(() => {
+        })
+        .finally(() => {
             loadingHistory.value = false;
         });
 }
-
 </script>

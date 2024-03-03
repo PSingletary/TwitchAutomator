@@ -77,16 +77,16 @@ Hub: https://hub.docker.com/r/mrbrax/twitchautomator
 ### Manual build
 Run `docker-compose up --build -d` in the app directory. The `docker-compose.yml` file is required.
 
-If you want the public webapp to have a custom base folder, you must provide `BASE_URL` and `VUE_APP_BASE_URL` in the environment variable settings.
+If you want the public webapp to have a custom base folder, you must provide `BASE_URL` and `VITE_BASE_URL` in the environment variable settings.
 
 ---
 
 ## Standalone setup
 
 ### Main requirements
-- [node.js](https://nodejs.org/) 18+
+- [node.js](https://nodejs.org/) 20+
 - npm and yarn 3+
-- Python 3.8+
+- Python 3.9+
 - [pip](https://pypi.org/project/pip/)
 - [FFmpeg](https://ffmpeg.org/download.html)
 - [MediaInfo](https://mediaarea.net/en/MediaInfo)
@@ -97,7 +97,7 @@ If you want the public webapp to have a custom base folder, you must provide `BA
 ### pip packages
 - [streamlink](https://github.com/streamlink/streamlink) (required)
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) (not used at the moment)
-- [tcd](https://github.com/PetterKraabol/Twitch-Chat-Downloader) (optional)
+- [vcsi](https://github.com/amietn/vcsi) (optional)
 
 ### Steps
 

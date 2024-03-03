@@ -1,21 +1,29 @@
-import type { BaseVODChapter } from "@/core/Providers/Base/BaseVODChapter";
 import TwitchChannel from "@/core/Providers/Twitch/TwitchChannel";
 import TwitchVOD from "@/core/Providers/Twitch/TwitchVOD";
-import type { TwitchVODChapter } from "@/core/Providers/Twitch/TwitchVODChapter";
 import YouTubeChannel from "@/core/Providers/YouTube/YouTubeChannel";
 import YouTubeVOD from "@/core/Providers/YouTube/YouTubeVOD";
 import { defaultSidemenuShow, defaultVideoBlockShow } from "@/defs";
-import type { SidemenuShow, VideoBlockShow, VODTypes } from "@/twitchautomator";
-import type { ApiChannelResponse, ApiChannelsResponse, ApiErrorResponse, ApiJobsResponse, ApiLoginResponse, ApiQuotas, ApiResponse, ApiSettingsResponse, ApiVodResponse } from "@common/Api/Api";
+import type { ChannelTypes, SidemenuShow, VODTypes, VideoBlockShow } from "@/twitchautomator";
+import type {
+    ApiChannelResponse,
+    ApiChannelsResponse,
+    ApiErrorResponse,
+    ApiJobsResponse,
+    ApiLoginResponse,
+    ApiQuotas,
+    ApiResponse,
+    ApiSettingsResponse,
+    ApiVodResponse,
+} from "@common/Api/Api";
 import type { ApiChannels, ApiJob, ApiLogLine, ApiVods } from "@common/Api/Client";
+import type { ClientSettings } from "@common/ClientSettings";
 import { defaultConfig } from "@common/ClientSettings";
-import type { ClientSettings } from "@common/ClientSettings.d";
+import type { settingsFields } from "@common/ServerConfig";
 import axios from "axios";
 import { parseJSON } from "date-fns";
 import { defineStore } from "pinia";
-import type { ChannelTypes } from "@/twitchautomator";
-import type { settingsFields } from "@common/ServerConfig";
-
+import type { WinstonLogLine } from "@common/Log";
+import { isTwitchChannel, isTwitchApiChannel, isYouTubeApiChannel, isTwitchApiVOD, isYouTubeVOD, isYouTubeChannel, isYouTubeApiVOD } from "@/mixins/newhelpers";
 
 interface StoreType {
     app_name: string;
@@ -31,7 +39,7 @@ interface StoreType {
     serverType: string;
     websocketUrl: string;
     errors: string[];
-    log: ApiLogLine[];
+    log: WinstonLogLine[];
     // diskTotalSize: number;
     diskFreeSize: number;
     loading: boolean;
@@ -83,7 +91,7 @@ export const useStore = defineStore("twitchAutomator", {
         cfg<T>(key: keyof typeof settingsFields, def?: T): T {
             if (!this.config) {
                 console.error(`Config is not loaded, tried to get key: ${key}`);
-                return <T><unknown>undefined;
+                return <T>(<unknown>undefined);
             }
             if (this.config[key] === undefined || this.config[key] === null) return <T>def;
             return this.config[key];
@@ -100,7 +108,7 @@ export const useStore = defineStore("twitchAutomator", {
             let response;
 
             try {
-                response = await axios.get<ApiSettingsResponse>(`/api/v0/settings`);
+                response = await axios.get<ApiSettingsResponse>("/api/v0/settings");
             } catch (error) {
                 alert(error);
                 return;
@@ -135,22 +143,20 @@ export const useStore = defineStore("twitchAutomator", {
 
             await this.fetchAndUpdateStreamerList();
             await this.fetchAndUpdateJobs();
-
         },
         async fetchAndUpdateStreamerList(): Promise<void> {
             // console.debug("Fetching streamer list");
             const data = await this.fetchStreamerList();
             if (data) {
-                const channels = data.streamer_list.map((channel) => {
-                    switch (channel.provider) {
-                        case "twitch":
-                            // console.debug("Creating TwitchChannel", channel.internalName);
+                const channels = data.streamer_list
+                    .map((channel) => {
+                        if (isTwitchApiChannel(channel)) {
                             return TwitchChannel.makeFromApiResponse(channel);
-                        case "youtube":
-                            // console.debug("Creating YouTubeChannel", channel.internalName);
+                        } else if (isYouTubeApiChannel(channel)) {
                             return YouTubeChannel.makeFromApiResponse(channel);
-                    }
-                }).filter(c => c !== undefined);
+                        }
+                    })
+                    .filter((c) => c !== undefined);
 
                 if (!channels) {
                     console.error("No channels found");
@@ -165,11 +171,11 @@ export const useStore = defineStore("twitchAutomator", {
                 // this.diskTotalSize = data.total_size;
             }
         },
-        async fetchStreamerList(): Promise<false | { streamer_list: ApiChannels[]; total_size: number; free_size: number; }> {
+        async fetchStreamerList(): Promise<false | { streamer_list: ApiChannels[]; total_size: number; free_size: number }> {
             this.loading = true;
             let response;
             try {
-                response = await axios.get<ApiChannelsResponse | ApiErrorResponse>(`/api/v0/channels`);
+                response = await axios.get<ApiChannelsResponse | ApiErrorResponse>("/api/v0/channels");
             } catch (error) {
                 console.error(error);
                 this.loading = false;
@@ -213,13 +219,13 @@ export const useStore = defineStore("twitchAutomator", {
             if (!vod_data) return false;
 
             // check if streamer is already in the list
-            if (vod_data.provider == "twitch") {
-                const index = this.streamerList.findIndex((s) => s instanceof TwitchChannel && s.uuid === vod_data.uuid);
+            if (isTwitchApiVOD(vod_data)){
+                const index = this.streamerList.findIndex((s) => isTwitchChannel(s) && s.uuid === vod_data.uuid);
                 if (index === -1) return false;
                 const vod = TwitchVOD.makeFromApiResponse(vod_data);
                 return this.updateVod(vod);
-            } else if (vod_data.provider == "youtube") {
-                const index = this.streamerList.findIndex((s) => s instanceof YouTubeChannel && s.uuid === vod_data.uuid);
+            } else if (isYouTubeApiVOD(vod_data)){
+                const index = this.streamerList.findIndex((s) => isYouTubeChannel(s) && s.uuid === vod_data.uuid);
                 if (index === -1) return false;
                 const vod = YouTubeVOD.makeFromApiResponse(vod_data);
                 return this.updateVod(vod);
@@ -227,12 +233,11 @@ export const useStore = defineStore("twitchAutomator", {
             return false;
         },
         updateVod(vod: VODTypes): boolean {
-
             const provider = vod.provider;
 
             const streamer = this.streamerList.find<ChannelTypes>((s): s is ChannelTypes => {
-                if (provider == "twitch") return s instanceof TwitchChannel && s.uuid === vod.channel_uuid;
-                if (provider == "youtube") return s instanceof YouTubeChannel && s.uuid === vod.channel_uuid;
+                if (provider == "twitch") return isTwitchChannel(s) && s.uuid === vod.channel_uuid;
+                if (provider == "youtube") return isYouTubeChannel(s) && s.uuid === vod.channel_uuid;
                 return false;
             });
             if (!streamer) return false;
@@ -258,12 +263,12 @@ export const useStore = defineStore("twitchAutomator", {
             // const vod = TwitchVOD.makeFromApiResponse(vod_data);
             // return this.updateVod(vod);
 
-            if (vod_data.provider == "twitch") {
+            if (isTwitchApiVOD(vod_data)){
                 const index = this.streamerList.findIndex((channel) => channel instanceof TwitchChannel && channel.uuid === vod_data.channel_uuid);
                 if (index === -1) return false;
                 const vod = TwitchVOD.makeFromApiResponse(vod_data);
                 return this.updateVod(vod);
-            } else if (vod_data.provider == "youtube") {
+            } else if (isYouTubeApiVOD(vod_data)){
                 const index = this.streamerList.findIndex((channel) => channel instanceof YouTubeChannel && channel.uuid === vod_data.channel_uuid);
                 if (index === -1) return false;
                 const vod = YouTubeVOD.makeFromApiResponse(vod_data);
@@ -271,7 +276,6 @@ export const useStore = defineStore("twitchAutomator", {
             }
 
             return false;
-
         },
         removeVod(basename: string): void {
             this.streamerList.forEach((s) => {
@@ -361,10 +365,13 @@ export const useStore = defineStore("twitchAutomator", {
         },
         updateStreamerFromData(streamer_data: ApiChannels): boolean {
             let streamer;
-            if (streamer_data.provider == "youtube") {
+            if (isYouTubeApiChannel(streamer_data)) {
                 streamer = YouTubeChannel.makeFromApiResponse(streamer_data);
-            } else {
+            } else if (isTwitchApiChannel(streamer_data)) {
                 streamer = TwitchChannel.makeFromApiResponse(streamer_data);
+            } else {
+                console.error("updateStreamerFromData", streamer_data);
+                return false;
             }
             return this.updateStreamer(streamer);
         },
@@ -376,11 +383,12 @@ export const useStore = defineStore("twitchAutomator", {
             const channels = data.map((channel) => {
                 if (channel.provider == "youtube") {
                     return YouTubeChannel.makeFromApiResponse(channel);
-                } else {
+                } else if (channel.provider == "twitch") {
                     return TwitchChannel.makeFromApiResponse(channel);
                 }
+                throw new Error(`Unknown provider ${channel}`);
             });
-            this.streamerList = channels;
+            this.streamerList = channels.filter((c): c is ChannelTypes => c !== undefined);
             this.streamerListLoaded = true;
         },
         updateErrors(data: string[]): void {
@@ -391,7 +399,7 @@ export const useStore = defineStore("twitchAutomator", {
             let response;
 
             try {
-                response = await axios.get<ApiJobsResponse | ApiErrorResponse>(`/api/v0/jobs`);
+                response = await axios.get<ApiJobsResponse | ApiErrorResponse>("/api/v0/jobs");
             } catch (error) {
                 console.error(error);
                 this.loading = false;
@@ -449,8 +457,8 @@ export const useStore = defineStore("twitchAutomator", {
             const job = this.jobList[index];
             const now = Date.now();
             const start = parseJSON(job.dt_started_at).getTime();
-            const elapsedSeconds = (now - start);
-            const calc = elapsedSeconds * (1 / (job.progress) - 1);
+            const elapsedSeconds = now - start;
+            const calc = elapsedSeconds * (1 / job.progress - 1);
             // console.debug(job_name, job.dt_started_at, elapsedSeconds, job.progress, calc);
             return calc;
         },
@@ -470,7 +478,6 @@ export const useStore = defineStore("twitchAutomator", {
             this.favourite_games = data;
         },
         fetchClientConfig() {
-
             let init = false;
             if (!localStorage.getItem("twitchautomator_config")) {
                 console.debug("No config found, using default");
@@ -502,11 +509,9 @@ export const useStore = defineStore("twitchAutomator", {
 
             this.sidemenuShow = currentSidemenuShow;
 
-
             const currentVideoBlockShow: VideoBlockShow = localStorage.getItem("twitchautomator_videoblock")
                 ? JSON.parse(localStorage.getItem("twitchautomator_videoblock") as string)
                 : defaultVideoBlockShow;
-
 
             this.videoBlockShow = currentVideoBlockShow;
 
@@ -522,7 +527,7 @@ export const useStore = defineStore("twitchAutomator", {
         getStreamers(): ChannelTypes[] {
             return this.streamerList;
         },
-        addLog(lines: ApiLogLine[]) {
+        addLog(lines: WinstonLogLine[]) {
             this.log.push(...lines);
         },
         clearLog() {
@@ -533,7 +538,7 @@ export const useStore = defineStore("twitchAutomator", {
             let response;
 
             try {
-                response = await axios.post<ApiLoginResponse>(`/api/v0/auth/login`, { password });
+                response = await axios.post<ApiLoginResponse>("/api/v0/auth/login", { password });
             } catch (error) {
                 console.error(error);
                 this.loading = false;
@@ -554,7 +559,7 @@ export const useStore = defineStore("twitchAutomator", {
             let response;
 
             try {
-                response = await axios.post<ApiResponse>(`/api/v0/auth/logout`);
+                response = await axios.post<ApiResponse>("/api/v0/auth/logout");
             } catch (error) {
                 console.error(error);
                 this.loading = false;
@@ -573,15 +578,18 @@ export const useStore = defineStore("twitchAutomator", {
             this.visibleVod = basename;
         },
         channelUUIDToInternalName(uuid: string): string {
-            const channel = this.streamerList.find(c => c.uuid === uuid);
+            const channel = this.streamerList.find((c) => c.uuid === uuid);
             if (!channel) return "";
             return channel.internalName;
         },
-        validateClientConfig(config: any ): boolean {
+        validateClientConfig(config: any): boolean {
             if (!config) return false;
             if (typeof config !== "object") return false;
             if (config === null) return false;
             return true; // TODO: actual validation from the same function the server uses
+        },
+        hasJob(name: string): boolean {
+            return this.jobList.findIndex((j) => j.name === name) !== -1;
         }
     },
     getters: {
@@ -614,6 +622,6 @@ export const useStore = defineStore("twitchAutomator", {
             const url = this.config.app_url;
             if (url == "debug") return "http://localhost:8080";
             return url;
-        }
+        },
     },
 });

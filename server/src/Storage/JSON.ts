@@ -1,13 +1,11 @@
+import type { VODBookmark } from "@common/Bookmark";
 import type { VideoQuality } from "@common/Config";
-import type { EventSubResponse } from "@common/TwitchAPI/EventSub";
 import type { MuteStatus, Providers } from "@common/Defs";
-import type { AudioMetadata, VideoMetadata } from "@common/MediaInfo";
-import type { TwitchVODBookmark } from "@common/Bookmark";
 import type { ExportData } from "@common/Exporter";
-import type { VodViewerEntry, StreamPause } from "@common/Vod";
+import type { AudioMetadata, VideoMetadata } from "@common/MediaInfo";
+import type { EventSubResponse } from "@common/TwitchAPI/EventSub";
 
 export interface VODJSON {
-
     version: number;
     type: Providers;
 
@@ -61,6 +59,13 @@ export interface VODJSON {
     // stream_pauses?: StreamPause[];
     stream_pauses?: { start?: string; end?: string }[];
 
+    bookmarks: VODBookmark[];
+
+    external_vod_id?: string;
+    external_vod_title?: string;
+    external_vod_duration?: number;
+    external_vod_exists?: boolean;
+    external_vod_date?: string;
 }
 export interface TwitchVODJSON extends VODJSON {
     type: "twitch";
@@ -72,10 +77,9 @@ export interface TwitchVODJSON extends VODJSON {
     streamer_login: string;
 
     chapters: TwitchVODChapterJSON[];
-    bookmarks: TwitchVODBookmark[];
 
     twitch_vod_id?: string;
-    twitch_vod_duration?: number
+    twitch_vod_duration?: number;
     twitch_vod_title?: string;
     twitch_vod_date?: string;
     twitch_vod_muted?: MuteStatus;
@@ -83,12 +87,15 @@ export interface TwitchVODJSON extends VODJSON {
     twitch_vod_neversaved?: boolean;
     twitch_vod_exists?: boolean;
     twitch_vod_attempted?: boolean;
-
 }
 
 export interface YouTubeVODJSON extends VODJSON {
     channel_id?: string;
     youtube_vod_id?: string;
+}
+
+export interface KickVODJSON extends VODJSON {
+    kick_vod_id?: string;
 }
 
 export interface BaseVODChapterJSON {

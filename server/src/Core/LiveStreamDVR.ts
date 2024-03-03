@@ -3,40 +3,62 @@ import { compareVersions } from "compare-versions";
 import minimist from "minimist";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
-import { Server } from "node:http";
+import type { Server } from "node:http";
 // import { version } from "node:os";
+import type { BaseVODChapter } from "@/Core/Providers/Base/BaseVODChapter";
+import { TwitchChannel } from "@/Core/Providers/Twitch/TwitchChannel";
+import { TwitchGame } from "@/Core/Providers/Twitch/TwitchGame";
+import type { TwitchVOD } from "@/Core/Providers/Twitch/TwitchVOD";
+import type { TwitchVODChapter } from "@/Core/Providers/Twitch/TwitchVODChapter";
+import { YouTubeChannel } from "@/Core/Providers/YouTube/YouTubeChannel";
+import type { YouTubeVOD } from "@/Core/Providers/YouTube/YouTubeVOD";
+import { debugLog } from "@/Helpers/Console";
+import { formatBytes } from "@/Helpers/Format";
+import {
+    DVRBinaries,
+    DVRPipPackages,
+    getBinaryVersion,
+} from "@/Helpers/Software";
+import {
+    clearAllTimeoutsAndIntervals,
+    xClearInterval,
+    xInterval,
+} from "@/Helpers/Timeout";
+import { TwitchHelper } from "@/Providers/Twitch";
+import { YouTubeHelper } from "@/Providers/YouTube";
 import type { BinaryStatus } from "@common/Api/About";
-import { ChannelConfig } from "@common/Config";
+import type { ChannelConfig } from "@common/Config";
 import { SubStatus } from "@common/Defs";
 import checkDiskSpace from "check-disk-space";
+import readdirRecursive from "fs-readdir-recursive";
+import i18next, { t } from "i18next";
 import path from "node:path";
-import { WebSocket, WebSocketServer } from "ws";
+import type { WebSocketServer } from "ws";
+import { WebSocket } from "ws";
 import { version } from "../../package.json";
-import { formatBytes } from "../Helpers/Format";
-import { DVRBinaries, DVRPipPackages, getBinaryVersion } from "../Helpers/Software";
-import { TwitchHelper } from "../Providers/Twitch";
-import { YouTubeHelper } from "../Providers/YouTube";
-import { AppRoot, BaseConfigCacheFolder, BaseConfigDataFolder, BaseConfigPath, DataRoot, HomeRoot } from "./BaseConfig";
+import {
+    AppRoot,
+    BaseConfigCacheFolder,
+    BaseConfigDataFolder,
+    BaseConfigPath,
+    DataRoot,
+    HomeRoot,
+} from "./BaseConfig";
 import { ClientBroker } from "./ClientBroker";
 import { Config } from "./Config";
 import { Helper } from "./Helper";
 import { Job } from "./Job";
 import { KeyValue } from "./KeyValue";
-import { Log } from "./Log";
-import { BaseVODChapter } from "./Providers/Base/BaseVODChapter";
-import { TwitchChannel } from "./Providers/Twitch/TwitchChannel";
-import { TwitchGame } from "./Providers/Twitch/TwitchGame";
-import { TwitchVOD } from "./Providers/Twitch/TwitchVOD";
-import { TwitchVODChapter } from "./Providers/Twitch/TwitchVODChapter";
-import { YouTubeChannel } from "./Providers/YouTube/YouTubeChannel";
-import { YouTubeVOD } from "./Providers/YouTube/YouTubeVOD";
+import { LOGLEVEL, log } from "./Log";
+import type { KickChannel } from "./Providers/Kick/KickChannel";
+import type { KickVOD } from "./Providers/Kick/KickVOD";
 import { Scheduler } from "./Scheduler";
 import { Webhook } from "./Webhook";
 
 const argv = minimist(process.argv.slice(2));
 
-export type ChannelTypes = TwitchChannel | YouTubeChannel;
-export type VODTypes = TwitchVOD | YouTubeVOD;
+export type ChannelTypes = TwitchChannel | YouTubeChannel | KickChannel;
+export type VODTypes = TwitchVOD | YouTubeVOD | KickVOD;
 export type ChapterTypes = TwitchVODChapter | BaseVODChapter;
 
 export class LiveStreamDVR {
@@ -71,7 +93,6 @@ export class LiveStreamDVR {
      * Initialise entire application, like loading config, creating folders, etc.
      */
     static async init() {
-
         // Main load
         console.log(chalk.green("Initialising..."));
         console.log(chalk.magenta(`Environment: ${process.env.NODE_ENV}`));
@@ -82,10 +103,13 @@ export class LiveStreamDVR {
 
         if (argv.home && !fs.existsSync(HomeRoot)) {
             fs.mkdirSync(HomeRoot, { recursive: true });
-        } else if (!argv.home && !fs.existsSync(DataRoot)) { // create data root, is this a good idea?
+        } else if (!argv.home && !fs.existsSync(DataRoot)) {
+            // create data root, is this a good idea?
             // throw new Error(`DataRoot does not exist: ${DataRoot}`);
             fs.mkdirSync(DataRoot, { recursive: true });
         }
+
+        Config.updateDebug();
 
         Config.checkAppRoot();
 
@@ -94,7 +118,9 @@ export class LiveStreamDVR {
         const config = Config.getInstance().config;
         if (config && Object.keys(config).length > 0) {
             // throw new Error("Config already loaded, has init been called twice?");
-            console.error(chalk.red("Config already loaded, has init been called twice?"));
+            console.error(
+                chalk.red("Config already loaded, has init been called twice?")
+            );
             return false;
         }
 
@@ -102,9 +128,23 @@ export class LiveStreamDVR {
 
         Config.createFolders();
 
+        if (
+            fs.existsSync(path.join(BaseConfigCacheFolder.cache, "is_running"))
+        ) {
+            console.error(
+                chalk.red(
+                    "Application did not exit cleanly, please check logs for more information. Will continue to run."
+                )
+            );
+        }
+
         KeyValue.getInstance().load();
 
         Config.getInstance().loadConfig(); // load config, calls after this will work if config is required
+
+        i18next.changeLanguage(
+            Config.getInstance().cfg("basic.language", "en")
+        );
 
         await YouTubeHelper.setupClient();
 
@@ -114,14 +154,12 @@ export class LiveStreamDVR {
 
         await TwitchHelper.setupAxios();
 
-        Log.readTodaysLog();
+        // readTodaysLog();
 
-        Log.logAdvanced(
-            Log.Level.SUCCESS,
-            "config",
-            `The time is ${new Date().toISOString()}.` +
-            " Current topside temperature is 93 degrees, with an estimated high of one hundred and five." +
-            " The Black Mesa compound is maintained at a pleasant 68 degrees at all times."
+        log(
+            LOGLEVEL.SUCCESS,
+            "dvr.init",
+            t("base.bootmessage", [new Date().toISOString()])
         );
 
         await Config.getInstance().getGitHash();
@@ -144,45 +182,86 @@ export class LiveStreamDVR {
         await LiveStreamDVR.getInstance().updateFreeStorageDiskSpace();
         LiveStreamDVR.getInstance().startDiskSpaceInterval();
 
-        LiveStreamDVR.checkBinaryVersions();
+        await LiveStreamDVR.checkPythonVirtualEnv();
+
+        await LiveStreamDVR.checkBinaryVersions();
 
         // monitor for program exit
         // let saidGoobye = false;
         // const goodbye = () => {
         //     if (saidGoobye) return;
-        //     TwitchLog.logAdvanced(Log.Level.INFO, "config", "See you next time!");
+        //     TwitchlogAdvanced(LOGLEVEL.INFO, "config", "See you next time!");
         //     saidGoobye = true;
         // };
         // process.on("exit", goodbye);
         // process.on("SIGINT", goodbye);
         // process.on("SIGTERM", goodbye);
 
-        Log.logAdvanced(Log.Level.SUCCESS, "config", "Loading config stuff done.");
+        log(LOGLEVEL.SUCCESS, "dvr.init", "Loading config stuff done.");
 
         Config.getInstance().initialised = true;
 
-        // TwitchHelper.refreshUserAccessToken();
+        if (fs.existsSync(BaseConfigCacheFolder.cache)) {
+            fs.writeFileSync(
+                path.join(BaseConfigCacheFolder.cache, "is_running"),
+                "true"
+            );
+        }
 
+        // TwitchHelper.refreshUserAccessToken();
+    }
+
+    public static migrateChannelConfig(channel: ChannelConfig): void {
+        if (channel.provider == "twitch") {
+            if (!channel.internalName && channel.login) {
+                channel.internalName = channel.login;
+            }
+        } else if (channel.provider == "youtube") {
+            if (!channel.internalName && channel.channel_id) {
+                channel.internalName = channel.channel_id;
+            }
+            if (!channel.internalId && channel.channel_id) {
+                channel.internalId = channel.channel_id;
+            }
+        } else if (channel.provider == "kick") {
+            if (!channel.internalName && channel.slug) {
+                channel.internalName = channel.slug;
+            }
+        }
     }
 
     /**
      * @test disable
-     * @returns 
+     * @returns
      */
     public loadChannelsConfig(): boolean {
-
         if (!fs.existsSync(BaseConfigPath.channel)) {
             return false;
         }
 
-        Log.logAdvanced(Log.Level.INFO, "dvr.loadChannelsConfig", "Loading channel configs...");
+        log(
+            LOGLEVEL.INFO,
+            "dvr.loadChannelsConfig",
+            "Loading channel configs..."
+        );
 
-        const data: ChannelConfig[] = JSON.parse(fs.readFileSync(BaseConfigPath.channel, "utf8"));
+        const data: ChannelConfig[] = JSON.parse(
+            fs.readFileSync(BaseConfigPath.channel, "utf8")
+        );
 
         let needsSave = false;
         for (const channel of data) {
-            if ((!("quality" in channel) || !channel.quality) && channel.provider == "twitch") {
-                Log.logAdvanced(Log.Level.WARNING, "dvr.loadChannelsConfig", `Channel ${channel.login} has no quality set, setting to default`);
+            if (
+                (!("quality" in channel) || !channel.quality) &&
+                channel.provider == "twitch"
+            ) {
+                log(
+                    LOGLEVEL.WARNING,
+                    "dvr.loadChannelsConfig",
+                    `Channel ${
+                        channel.internalId || channel.login
+                    } has no quality set, setting to default`
+                );
                 channel.quality = ["best"];
                 needsSave = true;
             }
@@ -191,53 +270,99 @@ export class LiveStreamDVR {
             }
             if (!channel.uuid) {
                 channel.uuid = randomUUID();
-                Log.logAdvanced(Log.Level.WARNING, "dvr.loadChannelsConfig", `Channel does not have an UUID, generated: ${channel.uuid}`);
+                log(
+                    LOGLEVEL.WARNING,
+                    "dvr.loadChannelsConfig",
+                    `Channel does not have an UUID, generated: ${channel.uuid}`
+                );
                 needsSave = true;
             }
+
+            /*
+            if (!channel.internalName || !channel.internalId) {
+                if (channel.provider == "twitch") {
+                    channel.internalName = channel.login || "";
+                } else if (channel.provider == "youtube") {
+                    channel.internalName = channel.channel_id || "";
+                    channel.internalId = channel.channel_id || "";
+                } else if (channel.provider == "kick") {
+                    channel.internalName = channel.slug || "";
+                } else {
+                    // throw new Error(`Channel ${channel.uuid} does not have an internalName`);
+                }
+            }
+            */
+            LiveStreamDVR.migrateChannelConfig(channel);
         }
 
         this.channels_config = data;
 
-        Log.logAdvanced(Log.Level.SUCCESS, "dvr.loadChannelsConfig", `Loaded ${this.channels_config.length} channel configs!`);
+        log(
+            LOGLEVEL.SUCCESS,
+            "dvr.loadChannelsConfig",
+            `Loaded ${this.channels_config.length} channel configs!`
+        );
 
         if (needsSave) {
             this.saveChannelsConfig();
         }
 
+        // TODO: is this needed any longer?
         if (Config.getInstance().cfg("channel_folders")) {
             const folders = fs.readdirSync(BaseConfigDataFolder.vod);
             for (const folder of folders) {
                 if (folder == ".gitkeep") continue;
-                if (!this.channels_config.find(ch => ch.provider == "twitch" && ch.login === folder)) {
-                    Log.logAdvanced(Log.Level.WARNING, "dvr.loadChannelsConfig", `Channel folder ${folder} is not in channel config, left over?`);
+                if (
+                    !this.channels_config.find(
+                        (ch) =>
+                            ch.provider == "twitch" &&
+                            (ch.login === folder || ch.internalName === folder)
+                    )
+                ) {
+                    log(
+                        LOGLEVEL.WARNING,
+                        "dvr.loadChannelsConfig",
+                        `Channel folder ${folder} is not in channel config, left over?`
+                    );
                 }
             }
         }
 
         return true;
-
     }
 
     /**
      * Load channels into memory
-     * 
+     *
      * @returns Amount of loaded channels
      */
     public async loadChannels(): Promise<number> {
-        Log.logAdvanced(Log.Level.INFO, "dvr.loadChannels", "Loading channels...");
+        log(LOGLEVEL.INFO, "dvr.loadChannels", "Loading channels...");
         if (this.channels_config.length > 0) {
-            for (const channel of this.channels_config) {
+            for (const channelConfig of this.channels_config) {
+                log(
+                    LOGLEVEL.INFO,
+                    "dvr.loadChannels",
+                    `Loading channel ${channelConfig.uuid}, provider ${channelConfig.provider}...`
+                );
 
-                Log.logAdvanced(Log.Level.INFO, "dvr.loadChannels", `Loading channel ${channel.uuid}, provider ${channel.provider}...`);
-
-                if (!channel.provider || channel.provider == "twitch") {
-
+                if (
+                    !channelConfig.provider ||
+                    channelConfig.provider == "twitch"
+                ) {
                     let ch: TwitchChannel;
 
                     try {
-                        ch = await TwitchChannel.loadFromLogin(channel.login);
+                        ch = await TwitchChannel.load(channelConfig.uuid);
                     } catch (th) {
-                        Log.logAdvanced(Log.Level.FATAL, "dvr.load.tw", `TW Channel ${channel.login} could not be loaded: ${th}`);
+                        log(
+                            LOGLEVEL.FATAL,
+                            "dvr.load.tw",
+                            `TW Channel ${
+                                channelConfig.internalName ||
+                                channelConfig.login
+                            } could not be loaded: ${th}`
+                        );
                         console.error(th);
                         continue;
                         // break;
@@ -246,24 +371,47 @@ export class LiveStreamDVR {
                     if (ch) {
                         this.addChannel(ch);
                         await ch.postLoad();
-                        ch.getVods().forEach(vod => vod.postLoad());
-                        Log.logAdvanced(Log.Level.SUCCESS, "dvr.load.tw", `Loaded channel ${channel.login} with ${ch.getVods().length} vods`);
+                        ch.getVods().forEach((vod) => vod.postLoad());
+                        log(
+                            LOGLEVEL.SUCCESS,
+                            "dvr.load.tw",
+                            `Loaded channel ${
+                                channelConfig.internalName ||
+                                channelConfig.login
+                            } with ${ch.getVods().length} vods`
+                        );
                         if (ch.no_capture) {
-                            Log.logAdvanced(Log.Level.WARNING, "dvr.load.tw", `Channel ${channel.login} is configured to not capture streams.`);
+                            log(
+                                LOGLEVEL.WARNING,
+                                "dvr.load.tw",
+                                `Channel ${
+                                    channelConfig.internalName ||
+                                    channelConfig.login
+                                } is configured to not capture streams.`
+                            );
                         }
                     } else {
-                        Log.logAdvanced(Log.Level.FATAL, "dvr.load.tw", `Channel ${channel.login} could not be added, please check logs.`);
+                        log(
+                            LOGLEVEL.FATAL,
+                            "dvr.load.tw",
+                            `Channel ${
+                                channelConfig.internalName ||
+                                channelConfig.login
+                            } could not be added, please check logs.`
+                        );
                         break;
                     }
-
-                } else if (channel.provider == "youtube") {
-
+                } else if (channelConfig.provider == "youtube") {
                     let ch: YouTubeChannel;
 
                     try {
-                        ch = await YouTubeChannel.loadFromId(channel.channel_id);
+                        ch = await YouTubeChannel.load(channelConfig.uuid);
                     } catch (th) {
-                        Log.logAdvanced(Log.Level.FATAL, "dvr.load.yt", `YT Channel ${channel.channel_id} could not be loaded: ${th}`);
+                        log(
+                            LOGLEVEL.FATAL,
+                            "dvr.load.yt",
+                            `YT Channel ${channelConfig.internalName} could not be loaded: ${th}`
+                        );
                         console.error(th);
                         continue;
                         // break;
@@ -272,31 +420,55 @@ export class LiveStreamDVR {
                     if (ch) {
                         this.addChannel(ch);
                         await ch.postLoad();
-                        ch.getVods().forEach(vod => vod.postLoad());
-                        Log.logAdvanced(Log.Level.SUCCESS, "dvr.load.yt", `Loaded channel ${ch.displayName} with ${ch.getVods().length} vods`);
+                        ch.getVods().forEach((vod) => vod.postLoad());
+                        log(
+                            LOGLEVEL.SUCCESS,
+                            "dvr.load.yt",
+                            `Loaded channel ${ch.displayName} with ${
+                                ch.getVods().length
+                            } vods`
+                        );
                         if (ch.no_capture) {
-                            Log.logAdvanced(Log.Level.WARNING, "dvr.load.yt", `Channel ${ch.displayName} is configured to not capture streams.`);
+                            log(
+                                LOGLEVEL.WARNING,
+                                "dvr.load.yt",
+                                `Channel ${ch.displayName} is configured to not capture streams.`
+                            );
                         }
                     } else {
-                        Log.logAdvanced(Log.Level.FATAL, "dvr.load.yt", `Channel ${channel.channel_id} could not be added, please check logs.`);
+                        log(
+                            LOGLEVEL.FATAL,
+                            "dvr.load.yt",
+                            `Channel ${channelConfig.channel_id} could not be added, please check logs.`
+                        );
                         break;
                     }
-
                 }
             }
         }
-        Log.logAdvanced(Log.Level.SUCCESS, "dvr.loadChannels", `Loaded ${this.channels.length} channels!`);
+        log(
+            LOGLEVEL.SUCCESS,
+            "dvr.loadChannels",
+            `Loaded ${this.channels.length} channels!`
+        );
         return this.channels.length;
     }
 
     /**
      * @test disable
-     * @returns 
+     * @returns
      */
     public saveChannelsConfig(): boolean {
-        Log.logAdvanced(Log.Level.INFO, "dvr", "Saving channel config");
-        fs.writeFileSync(BaseConfigPath.channel, JSON.stringify(this.channels_config, null, 4));
-        return fs.existsSync(BaseConfigPath.channel) && fs.readFileSync(BaseConfigPath.channel, "utf8") === JSON.stringify(this.channels_config, null, 4);
+        log(LOGLEVEL.INFO, "dvr.saveChannelsConfig", "Saving channel config");
+        fs.writeFileSync(
+            BaseConfigPath.channel,
+            JSON.stringify(this.channels_config, null, 4)
+        );
+        return (
+            fs.existsSync(BaseConfigPath.channel) &&
+            fs.readFileSync(BaseConfigPath.channel, "utf8") ===
+                JSON.stringify(this.channels_config, null, 4)
+        );
     }
 
     public getChannels(): ChannelTypes[] {
@@ -305,18 +477,31 @@ export class LiveStreamDVR {
 
     public cleanLingeringVODs(): void {
         this.vods.forEach((vod) => {
-            const channel = vod.getChannel();
-            if (!channel) {
-                Log.logAdvanced(Log.Level.WARNING, "dvr", `Channel ${vod.getChannel().internalName} removed but VOD ${vod.basename} still lingering`);
+            let channel;
+            try {
+                channel = vod.getChannel();
+            } catch (error) {
+                log(
+                    LOGLEVEL.ERROR,
+                    "dvr.cleanLingeringVODs",
+                    `Channel ${vod.getChannel().internalName} removed but VOD ${
+                        vod.basename
+                    } still lingering`
+                );
             }
+
             if (!fs.existsSync(vod.filename)) {
-                Log.logAdvanced(Log.Level.WARNING, "dvr", `VOD ${vod.basename} in memory but not on disk`);
+                log(
+                    LOGLEVEL.WARNING,
+                    "dvr.cleanLingeringVODs",
+                    `VOD ${vod.basename} in memory but not on disk`
+                );
             }
         });
     }
 
     public getChannelByUUID<T extends ChannelTypes>(uuid: string): T | false {
-        const search = this.channels.find(c => c.uuid == uuid);
+        const search = this.channels.find((c) => c.uuid == uuid);
         // if (!search) {
         //     console.error(`Channel with UUID ${uuid} not found in list: ${this.channels.map(c => c.uuid).join(", ")}`);
         //     return false;
@@ -326,11 +511,15 @@ export class LiveStreamDVR {
 
     /**
      * Get channel by internal name aka login. If there are multiple channels with the same login, the first one will be returned.
-     * @param login 
-     * @returns 
+     * @param login
+     * @returns
      */
-    public getChannelByInternalName<T extends ChannelTypes>(internalName: string): T | false {
-        const search = this.channels.find(c => c.internalName == internalName);
+    public getChannelByInternalName<T extends ChannelTypes>(
+        internalName: string
+    ): T | false {
+        const search = this.channels.find(
+            (c) => c.internalName == internalName
+        );
         return search as T;
     }
 
@@ -338,9 +527,17 @@ export class LiveStreamDVR {
         this.vods.push(vod);
     }
 
+    /**
+     * Adds a channel to the main channel list.
+     * @param channel - The channel to be added.
+     */
     public addChannel(channel: ChannelTypes): void {
         if (!channel.uuid) {
-            Log.logAdvanced(Log.Level.WARNING, "dvr.addChannel", `Channel ${channel.internalName} does not have an UUID!`);
+            log(
+                LOGLEVEL.WARNING,
+                "dvr.addChannel",
+                `Channel ${channel.internalName} does not have an UUID!`
+            );
         }
         this.channels.push(channel);
     }
@@ -354,13 +551,13 @@ export class LiveStreamDVR {
     }
 
     public getVodByUUID<T extends VODTypes>(uuid: string): T | false {
-        const search = this.getVods().find(c => c.uuid == uuid);
+        const search = this.getVods().find((c) => c.uuid == uuid);
         if (!search) return false;
         return search as T;
     }
 
     public getVodsByChannelUUID<T extends VODTypes>(uuid: string): T[] {
-        return this.getVods().filter(c => c.channel_uuid == uuid) as T[];
+        return this.getVods().filter((c) => c.channel_uuid == uuid) as T[];
     }
 
     public removeVodByIndex(index: number): void {
@@ -368,21 +565,21 @@ export class LiveStreamDVR {
     }
 
     public removeVodByUUID(uuid: string): void {
-        const index = this.vods.findIndex(c => c.uuid == uuid);
+        const index = this.vods.findIndex((c) => c.uuid == uuid);
         if (index > -1) {
             this.removeVodByIndex(index);
         }
     }
 
     public removeVodByChannelUUID(uuid: string): void {
-        const index = this.vods.findIndex(c => c.channel_uuid == uuid);
+        const index = this.vods.findIndex((c) => c.channel_uuid == uuid);
         if (index > -1) {
             this.removeVodByIndex(index);
         }
     }
 
     public removeAllVodsByChannelUUID(uuid: string): void {
-        const index = this.vods.findIndex(c => c.channel_uuid == uuid);
+        const index = this.vods.findIndex((c) => c.channel_uuid == uuid);
         if (index > -1) {
             this.removeVodByIndex(index);
             this.removeAllVodsByChannelUUID(uuid);
@@ -390,115 +587,177 @@ export class LiveStreamDVR {
     }
 
     public clearChannels(): void {
-        this.channels.forEach(c => c.clearVODs());
+        this.channels.forEach((c) => c.clearVODs());
         this.channels = [];
     }
 
     public clearVods(): void {
-        this.vods.forEach(vod => vod.stopWatching());
+        this.vods.forEach((vod) => vod.stopWatching());
         this.vods = [];
     }
-
 
     /**
      * Remove a vod from the vods list.
      * It is not deleted from disk.
-     * 
-     * @param uuid 
-     * @returns 
+     *
+     * @param uuid
+     * @returns
      */
     public removeVod(uuid: string): boolean {
         const vod = this.getVodByUUID(uuid);
         if (vod) {
-            this.vods = this.vods.filter(vod => vod.uuid != uuid);
-            Log.logAdvanced(Log.Level.INFO, "dvr.removeVod", `VOD ${vod.basename} removed from memory!`);
+            this.vods = this.vods.filter((vod) => vod.uuid != uuid);
+            log(
+                LOGLEVEL.INFO,
+                "dvr.removeVod",
+                `VOD ${vod.basename} removed from memory!`
+            );
             Webhook.dispatchAll("vod_removed", { basename: vod.basename });
             return true;
         }
         return false;
     }
 
-    public static shutdown(reason: string) {
+    public static shutdown(
+        reason: string,
+        doNotActuallyShutdown?: boolean
+    ): void {
         this.shutting_down = true;
-        console.log(chalk.red(`[${new Date().toISOString()}] Shutting down (${reason})...`));
+        console.log(
+            chalk.red(
+                `[${new Date().toISOString()}] Shutting down (${reason})...`
+            )
+        );
 
         if (this.websocketServer) {
             this.websocketServer.clients.forEach((client) => {
                 if (client.readyState === WebSocket.OPEN) {
-                    console.log("Closing websocket client connection");
+                    debugLog(
+                        `Closing websocket client connection ${client.url}`
+                    );
                     client.close();
                 }
             });
         }
 
-        let timeout: NodeJS.Timeout | undefined = undefined;
-        // introduced in node 18.2
-        if ("closeAllConnections" in this.server) {
-            console.log("closeAllConnections is available, using it");
-            this.server.closeAllConnections();
-        } else {
-            // bad workaround
-            timeout = setTimeout(() => {
-                console.log(chalk.red("Force exiting server, 10 seconds have passed without close event."));
-                process.exit(1);
-            }, 10000);
+        if (this.server) {
+            // let timeout: NodeJS.Timeout | undefined = undefined;
+            // introduced in node 18.2
+            if ("closeAllConnections" in this.server) {
+                debugLog("closeAllConnections is available, using it");
+                this.server.closeAllConnections();
+            } else {
+                console.error("closeAllConnections is not available");
+                // bad workaround
+                /*
+                timeout = xTimeout(() => {
+                    console.log(chalk.red("Force exiting server, 10 seconds have passed without close event."));
+                    if (!doNotActuallyShutdown) process.exit(1);
+                }, 10000);*/
+            }
         }
 
         if (this.debugConnectionInterval) {
             clearInterval(this.debugConnectionInterval);
         }
 
+        clearAllTimeoutsAndIntervals();
+
         // this will not be called until all connections are closed
-        this.server.close(async (error) => {
-            if (error) {
-                console.log(chalk.red(error));
-            } else {
-                console.log(chalk.red("express server is now down"));
-            }
-            if (this.websocketServer) this.websocketServer.close();
-            Scheduler.removeAllJobs();
-            for (const c of LiveStreamDVR.getInstance().channels) {
-                await c.stopWatching();
-            }
-            for (const v of LiveStreamDVR.getInstance().vods) {
-                await v.stopWatching();
-            }
-            for (const j of Job.jobs) {
-                await j.kill();
-            }
-            ClientBroker.wss = undefined;
-            Config.getInstance().stopWatchingConfig();
-            TwitchHelper.removeAllEventWebsockets();
-            if (timeout !== undefined) clearTimeout(timeout);
-            if (LiveStreamDVR.getInstance().diskSpaceInterval) clearInterval(LiveStreamDVR.getInstance().diskSpaceInterval);
-            console.log(chalk.red("Finished tasks, bye bye."));
-            // process.exit(0);
-        });
+        if (this.server) {
+            this.server.close(async (error) => {
+                if (error) {
+                    console.error(chalk.red(error));
+                } else {
+                    debugLog(chalk.red("express server is now down"));
+                }
+                await this.shutdownRest();
+            });
+        } else {
+            this.shutdownRest();
+        }
+    }
+
+    private static async shutdownRest(): Promise<void> {
+        if (this.websocketServer) this.websocketServer.close();
+        Scheduler.removeAllJobs();
+        for (const c of LiveStreamDVR.getInstance().channels) {
+            await c.stopWatching();
+        }
+        for (const v of LiveStreamDVR.getInstance().vods) {
+            await v.stopWatching();
+        }
+        for (const j of Job.jobs) {
+            await j.kill();
+        }
+        ClientBroker.wss = undefined;
+        Config.getInstance().stopWatchingConfig();
+        TwitchHelper.removeAllEventWebsockets();
+        // if (timeout !== undefined) clearTimeout(timeout);
+        const dsi = LiveStreamDVR.getInstance().diskSpaceInterval;
+        if (dsi) xClearInterval(dsi);
+        if (fs.existsSync(path.join(BaseConfigCacheFolder.cache, "is_running")))
+            fs.unlinkSync(path.join(BaseConfigCacheFolder.cache, "is_running"));
+        console.log(chalk.red("Finished tasks, bye bye."));
+        // process.exit(0);
     }
 
     /**
      * @test disable
-     * @returns 
+     * @returns
      */
     public static checkVersion(): void {
         if (fs.existsSync(path.join(BaseConfigCacheFolder.cache))) {
-            if (fs.existsSync(path.join(BaseConfigCacheFolder.cache, "currentversion.dat"))) {
-                const old_version = fs.readFileSync(path.join(BaseConfigCacheFolder.cache, "currentversion.dat"), { encoding: "utf-8" });
+            if (
+                fs.existsSync(
+                    path.join(BaseConfigCacheFolder.cache, "currentversion.dat")
+                )
+            ) {
+                const oldVersion = fs.readFileSync(
+                    path.join(
+                        BaseConfigCacheFolder.cache,
+                        "currentversion.dat"
+                    ),
+                    { encoding: "utf-8" }
+                );
                 let compare;
                 try {
-                    compare = compareVersions(version, old_version) == -1 && !this.argv["ignore-version"];
+                    compare =
+                        compareVersions(version, oldVersion) == -1 &&
+                        !this.argv["ignore-version"];
                 } catch (error) {
-                    console.log(chalk.bgRed.whiteBright(`Could not compare version ${version} to ${old_version}: ${(error as Error).message}`));
+                    console.log(
+                        chalk.bgRed.whiteBright(
+                            `Could not compare version ${version} to ${oldVersion}: ${
+                                (error as Error).message
+                            }`
+                        )
+                    );
                     return;
                 }
                 if (compare) {
-                    console.log(chalk.bgRed.whiteBright(`Server has been started with an older version than the data folder (old ${old_version}, current ${version}).`));
-                    console.log(chalk.bgRed.whiteBright("Use the argument --ignore-version to continue."));
-                    console.log(chalk.bgRed.whiteBright("If you have been using the ts-develop branch and gone back to master, this can happen."));
+                    console.log(
+                        chalk.bgRed.whiteBright(
+                            `Server has been started with an older version than the data folder (old ${oldVersion}, current ${version}).`
+                        )
+                    );
+                    console.log(
+                        chalk.bgRed.whiteBright(
+                            "Use the argument --ignore-version to continue."
+                        )
+                    );
+                    console.log(
+                        chalk.bgRed.whiteBright(
+                            "If you have been using the ts-develop branch and gone back to master, this can happen."
+                        )
+                    );
                     process.exit(1);
                 }
             }
-            fs.writeFileSync(path.join(BaseConfigCacheFolder.cache, "currentversion.dat"), version);
+            fs.writeFileSync(
+                path.join(BaseConfigCacheFolder.cache, "currentversion.dat"),
+                version
+            );
         }
     }
 
@@ -523,30 +782,59 @@ export class LiveStreamDVR {
     //     }
     // }
 
-    private static debugConnectionInterval: NodeJS.Timeout | undefined = undefined;
+    private static debugConnectionInterval: NodeJS.Timeout | undefined =
+        undefined;
     public static postInit() {
-        this.debugConnectionInterval = setInterval(() => {
+        this.debugConnectionInterval = xInterval(() => {
             this.server.getConnections((error, count) => {
                 if (error) {
                     console.log(chalk.red(error));
                 } else {
                     if (Config.debug) {
-                        console.log(chalk.yellow(`[Debug][${new Date().toISOString()}] Currently ${count} HTTP/WebSocket connections`));
+                        debugLog(
+                            chalk.yellow(
+                                `Currently ${count} HTTP/WebSocket connections`
+                            )
+                        );
                     } else if (count > 5) {
-                        console.log(chalk.yellow(`[Warn][${new Date().toISOString()}] Currently ${count} HTTP/WebSocket connections`));
+                        console.log(
+                            chalk.yellow(
+                                `Currently ${count} HTTP/WebSocket connections`
+                            )
+                        );
                     }
                 }
             });
+            // measureLogMemoryUsage();
+            const memoryFootprint = this.gatherMemoryFootprint();
+            for (const key in memoryFootprint) {
+                const value = memoryFootprint[key];
+                if (value > 1024 * 1024) {
+                    debugLog(
+                        `Memory footprint of ${key}: ${formatBytes(value)}`
+                    );
+                }
+            }
         }, 60000);
     }
 
     public static getErrors(): string[] {
         const errors = [];
-        if (!TwitchHelper.axios) errors.push("Axios is not initialized. Make sure the client id and secret are set in the config.");
-        if (!Config.getInstance().cfg("app_url") && Config.getInstance().cfg("app_url") !== "debug") errors.push("No app url set in the config."); // FIXME: contradicting
-        if (!Config.getInstance().cfg("api_client_id")) errors.push("No client id set in the config.");
-        if (!Config.getInstance().cfg("api_secret")) errors.push("No client secret set in the config.");
-        if (LiveStreamDVR.getInstance().getChannels().length == 0) errors.push("No channels set in the config.");
+        if (!TwitchHelper.hasAxios())
+            errors.push(
+                "Axios is not initialized. Make sure the client id and secret are set in the config."
+            );
+        if (
+            !Config.getInstance().cfg("app_url") &&
+            Config.getInstance().cfg("app_url") !== "debug"
+        )
+            errors.push("No app url set in the config."); // FIXME: contradicting
+        if (!Config.getInstance().cfg("api_client_id"))
+            errors.push("No client id set in the config.");
+        if (!Config.getInstance().cfg("api_secret"))
+            errors.push("No client secret set in the config.");
+        if (LiveStreamDVR.getInstance().getChannels().length == 0)
+            errors.push("No channels set in the config.");
 
         if (!Helper.path_ffmpeg()) errors.push("Failed to find ffmpeg");
         if (!Helper.path_streamlink()) errors.push("Failed to find streamlink");
@@ -554,23 +842,49 @@ export class LiveStreamDVR {
 
         for (const key in Config.settingsFields) {
             const field = Config.settingsFields[key];
-            if (field.deprecated && Config.getInstance().cfg(key) !== field.default) {
+            if (
+                field.deprecated &&
+                Config.getInstance().cfg(key) !== field.default
+            ) {
                 if (typeof field.deprecated === "string") {
                     errors.push(`${key} is deprecated: ${field.deprecated}`);
                 } else {
-                    errors.push(`'${key}' is deprecated and will be removed in the future.`);
+                    errors.push(
+                        `'${key}' is deprecated and will be removed in the future.`
+                    );
                 }
             }
         }
 
         for (const channel of TwitchChannel.getChannels()) {
-            for (const sub_type of TwitchHelper.CHANNEL_SUB_TYPES) {
-                if (KeyValue.getInstance().get(`${channel.internalId}.substatus.${sub_type}`) === SubStatus.WAITING) {
-                    errors.push(`${channel.internalName} is waiting for subscription ${sub_type}. Please check the config.`);
-                } else if (KeyValue.getInstance().get(`${channel.internalId}.substatus.${sub_type}`) === SubStatus.FAILED) {
-                    errors.push(`${channel.internalName} failed to subscribe ${sub_type}. Please check the config.`);
-                } else if (KeyValue.getInstance().get(`${channel.internalId}.substatus.${sub_type}`) === SubStatus.NONE || !KeyValue.getInstance().has(`${channel.internalId}.substatus.${sub_type}`)) {
-                    errors.push(`${channel.internalName} is not subscribed to ${sub_type}. Please check the config and subscribe.`);
+            for (const subType of TwitchHelper.CHANNEL_SUB_TYPES) {
+                if (
+                    KeyValue.getInstance().get(
+                        `${channel.internalId}.substatus.${subType}`
+                    ) === SubStatus.WAITING
+                ) {
+                    errors.push(
+                        `${channel.internalName} is waiting for subscription ${subType}. Please check the config.`
+                    );
+                } else if (
+                    KeyValue.getInstance().get(
+                        `${channel.internalId}.substatus.${subType}`
+                    ) === SubStatus.FAILED
+                ) {
+                    errors.push(
+                        `${channel.internalName} failed to subscribe ${subType}. Please check the config.`
+                    );
+                } else if (
+                    KeyValue.getInstance().get(
+                        `${channel.internalId}.substatus.${subType}`
+                    ) === SubStatus.NONE ||
+                    !KeyValue.getInstance().has(
+                        `${channel.internalId}.substatus.${subType}`
+                    )
+                ) {
+                    errors.push(
+                        `${channel.internalName} is not subscribed to ${subType}. Please check the config and subscribe.`
+                    );
                 }
             }
         }
@@ -578,14 +892,23 @@ export class LiveStreamDVR {
         for (const vod of LiveStreamDVR.getInstance().getVods()) {
             if (!vod.is_finalized) continue;
             if (vod.segments.length > 1) {
-                if (!vod.segments.some(s => s.filename?.endsWith("_vod.mp4"))) {
-                    errors.push(`VOD ${vod.basename} has more than one segment.`);
+                if (
+                    !vod.segments.some((s) => s.filename?.endsWith("_vod.mp4"))
+                ) {
+                    errors.push(
+                        `VOD ${vod.basename} has more than one segment.`
+                    );
                 }
             } else if (vod.segments.length > 0) {
-                vod.segments.forEach(s => {
+                vod.segments.forEach((s) => {
                     if (s.filename?.endsWith("_vod.mp4")) return;
-                    if (s.basename && path.parse(s.basename).name !== vod.basename) {
-                        errors.push(`VOD ${vod.basename} has a segment with a different basename: ${s.basename}`);
+                    if (
+                        s.basename &&
+                        path.parse(s.basename).name !== vod.basename
+                    ) {
+                        errors.push(
+                            `VOD ${vod.basename} has a segment with a different basename: ${s.basename}`
+                        );
                     }
                 });
             } else {
@@ -596,14 +919,14 @@ export class LiveStreamDVR {
         for (const bin in this.binaryVersions) {
             const d = this.binaryVersions[bin];
             if (d.status !== "ok") {
-                errors.push(`Binary ${bin} (${d.version}/${d.min_version}) is not ok: ${d.status}`);
+                errors.push(
+                    `Binary ${bin} (${d.version}/${d.min_version}) is not ok: ${d.status}`
+                );
             }
         }
 
         if (Config.debug) {
-
             for (const vod of LiveStreamDVR.getInstance().getVods()) {
-
                 if (!vod.is_finalized) continue;
 
                 if (!vod.duration) continue;
@@ -614,7 +937,9 @@ export class LiveStreamDVR {
                 const lastChapter = vod.chapters[vod.chapters.length - 1];
 
                 if (firstChapter.offset && firstChapter.offset > 0) {
-                    errors.push(`${vod.basename} first chapter starts at ${firstChapter.offset} seconds. Missing pre-stream chapter update?`);
+                    errors.push(
+                        `${vod.basename} first chapter starts at ${firstChapter.offset} seconds. Missing pre-stream chapter update?`
+                    );
                 }
 
                 // This check does not work since the start/end time of the livestream is not the same as the duration of the VOD
@@ -622,19 +947,36 @@ export class LiveStreamDVR {
                 //     errors.push(`${vod.basename} last chapter ends at ${Math.round(lastChapter.offset + lastChapter.duration)} seconds but the VOD duration is ${vod.duration} seconds.`);
                 // }
 
-                const chaptersDuration = (vod.chapters as ChapterTypes[]).reduce((prev, cur) => prev + (cur.duration || 0), 0);
+                const chaptersDuration = (
+                    vod.chapters as ChapterTypes[]
+                ).reduce((prev, cur) => prev + (cur.duration || 0), 0);
                 if (vod.duration - chaptersDuration > 0) {
-                    errors.push(`${vod.basename} has a duration of ${vod.duration} but the chapters are not aligned (${chaptersDuration}).`);
+                    errors.push(
+                        `${vod.basename} has a duration of ${vod.duration} but the chapters are not aligned (${chaptersDuration}).`
+                    );
                 }
 
                 for (const chapter of vod.chapters) {
                     if (!chapter.duration || chapter.duration == 0) {
-                        errors.push(`${vod.basename} chapter ${chapter.title} has no duration.`);
+                        errors.push(
+                            `${vod.basename} chapter ${chapter.title} has no duration.`
+                        );
                     }
                 }
-
             }
+        }
 
+        // check for ts files in storage
+        const files = readdirRecursive(BaseConfigDataFolder.storage);
+        for (const file of files) {
+            if (file.endsWith(".ts")) {
+                errors.push(
+                    `Found ts file in storage folder: ${path.join(
+                        BaseConfigDataFolder.storage,
+                        file
+                    )}`
+                );
+            }
         }
 
         return errors;
@@ -655,31 +997,39 @@ export class LiveStreamDVR {
             return false;
         }
         this.freeStorageDiskSpace = ds.free;
-        Log.logAdvanced(Log.Level.DEBUG, "dvr", `Free storage disk space: ${formatBytes(this.freeStorageDiskSpace)}`);
+        log(
+            LOGLEVEL.DEBUG,
+            "dvr.updateFreeStorageDiskSpace",
+            `Free storage disk space: ${formatBytes(this.freeStorageDiskSpace)}`
+        );
         return true;
     }
 
     public startDiskSpaceInterval() {
-        if (this.diskSpaceInterval) clearInterval(this.diskSpaceInterval);
-        this.diskSpaceInterval = setInterval(() => {
-            // if (LiveStreamDVR.getInstance().isIdle) return;
-            this.updateFreeStorageDiskSpace();
-        }, 1000 * 60 * 10); // 10 minutes
+        if (this.diskSpaceInterval) xClearInterval(this.diskSpaceInterval);
+        this.diskSpaceInterval = xInterval(
+            () => {
+                // if (LiveStreamDVR.getInstance().isIdle) return;
+                this.updateFreeStorageDiskSpace();
+            },
+            1000 * 60 * 10
+        ); // 10 minutes
     }
 
     /**
      * Is there anything that is happening?
      */
     get isIdle(): boolean {
-        if (this.getChannels().some(c => c.is_capturing)) return false;
-        if (this.getVods().some(v => v.is_capturing)) return false;
-        if (this.getVods().some(v => v.is_converting)) return false;
+        if (this.getChannels().some((c) => c.is_capturing)) return false;
+        if (this.getVods().some((v) => v.is_capturing)) return false;
+        if (this.getVods().some((v) => v.is_converting)) return false;
         if (Job.jobs.length > 0) return false;
         return true;
     }
 
     public static binaryVersions: Record<string, BinaryStatus> = {};
     public static async checkBinaryVersions() {
+        log(LOGLEVEL.INFO, "dvr.bincheck", "Checking binary versions...");
         const bins = DVRBinaries();
         const pkgs = DVRPipPackages();
         for (const key in bins) {
@@ -688,7 +1038,11 @@ export class LiveStreamDVR {
                 const ret = await getBinaryVersion("bin", key);
                 if (ret) {
                     LiveStreamDVR.binaryVersions[key] = ret;
-                    console.log(`Binary ${key} version: ${ret.version}`);
+                    log(
+                        LOGLEVEL.INFO,
+                        "dvr.checkBinaryVersions",
+                        `Binary ${key} version: ${ret.version}`
+                    );
                 }
             }
         }
@@ -698,10 +1052,107 @@ export class LiveStreamDVR {
                 const ret = await getBinaryVersion("pip", key);
                 if (ret) {
                     LiveStreamDVR.binaryVersions[key] = ret;
-                    console.log(`Pip package ${key} version: ${ret.version}`);
+                    log(
+                        LOGLEVEL.INFO,
+                        "dvr.checkBinaryVersions",
+                        `Pip package ${key} version: ${ret.version}`
+                    );
                 }
             }
         }
+    }
 
+    public static async checkPythonVirtualEnv() {
+        log(
+            LOGLEVEL.INFO,
+            "dvr.venvcheck",
+            "Checking python virtual environment..."
+        );
+
+        const isEnabled = Config.getInstance().cfg<boolean>(
+            "python.enable_pipenv"
+        );
+
+        if (!isEnabled) {
+            log(
+                LOGLEVEL.INFO,
+                "dvr.venvcheck",
+                "Python virtual environment is not enabled in config."
+            );
+            return;
+        }
+
+        const hasPipenv = Helper.path_pipenv();
+        if (!hasPipenv) {
+            log(
+                LOGLEVEL.ERROR,
+                "dvr.venvcheck",
+                "Python virtual environment is enabled but pipenv is not found. Is it installed?"
+            );
+            return;
+        }
+
+        const venvPath = await Helper.path_venv();
+        if (!venvPath && Helper.path_pipenv()) {
+            console.log(
+                chalk.red(
+                    "Python virtual environment is enabled but not found."
+                )
+            );
+            console.log(
+                chalk.red("Please run 'pipenv install' in the root folder.")
+            );
+            process.exit(1);
+        }
+
+        if (!venvPath) {
+            log(
+                LOGLEVEL.ERROR,
+                "dvr.venvcheck",
+                "Python virtual environment is not enabled (not found)."
+            );
+            return;
+        }
+
+        if (venvPath !== Config.getInstance().cfg("python.virtualenv_path")) {
+            log(
+                LOGLEVEL.INFO,
+                "dvr.venvcheck",
+                "Updating python virtual environment path in config."
+            );
+            Config.getInstance().setConfig("python.virtualenv_path", venvPath);
+            Config.getInstance().saveConfig();
+        }
+
+        log(
+            LOGLEVEL.INFO,
+            "dvr.venvcheck",
+            `Python virtual environment path: ${venvPath}`
+        );
+    }
+
+    public static gatherMemoryFootprint(): Record<string, number> {
+        const ret: Record<string, number> = {};
+        // const mem = process.memoryUsage();
+        // for (const key in mem) {
+        //     ret[key] = mem[key];
+        // }
+        ret["rss"] = process.resourceUsage().maxRSS;
+        ret["heapTotal"] = process.memoryUsage().heapTotal;
+        ret["heapUsed"] = process.memoryUsage().heapUsed;
+        ret["external"] = process.memoryUsage().external;
+
+        // ret["log"] = Buffer.byteLength(JSON.stringify(getLogLines()), "utf8");
+        ret["keyvalue"] = Buffer.byteLength(
+            JSON.stringify(KeyValue.getInstance().getData()),
+            "utf8"
+        );
+        ret["channels_config"] = Buffer.byteLength(
+            JSON.stringify(LiveStreamDVR.getInstance().channels_config),
+            "utf8"
+        );
+        // ret["channels"] = Buffer.byteLength(JSON.stringify(LiveStreamDVR.getInstance().channels), "utf8");
+        // ret["vods"] = Buffer.byteLength(JSON.stringify(LiveStreamDVR.getInstance().vods), "utf8");
+        return ret;
     }
 }

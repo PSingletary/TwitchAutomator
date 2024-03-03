@@ -9,11 +9,11 @@ import type BaseVOD from "./BaseVOD";
 import type { Providers } from "@common/Defs";
 
 export default class BaseChannel {
-
     provider: Providers = "base";
-    userid = "";
-    display_name = "";
-    login = "";
+    uuid = "";
+    // userid = "";
+    // display_name = "";
+    // login = "";
     description = "";
     quality: VideoQuality[] = [];
     no_capture = false;
@@ -52,7 +52,28 @@ export default class BaseChannel {
     profilePictureUrl = "";
 
     public static makeFromApiResponse(apiResponse: ApiBaseChannel): BaseChannel {
-        throw new Error("Not for base channel");
+
+        const channel = new BaseChannel();
+
+        channel.provider = apiResponse.provider;
+        channel.uuid = apiResponse.uuid;
+        channel.displayName = apiResponse.displayName;
+        channel.internalName = apiResponse.internalName;
+        channel.internalId = apiResponse.internalId;
+        channel.url = apiResponse.url;
+        channel.profilePictureUrl = apiResponse.profilePictureUrl;
+        channel.description = apiResponse.description;
+        // channel.quality = apiResponse.quality || [];
+        channel.vods_raw = apiResponse.vods_raw;
+        channel.clips_list = apiResponse.clips_list;
+        channel.video_list = apiResponse.video_list;
+        channel.no_capture = apiResponse.no_capture;
+        channel.is_live = apiResponse.is_live ?? false;
+        channel.current_stream_number = apiResponse.current_stream_number ?? 0;
+        channel.current_season = apiResponse.current_season ?? "";
+        
+        return channel;        
+        
     }
 
     get current_vod(): BaseVOD | undefined {

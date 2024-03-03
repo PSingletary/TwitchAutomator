@@ -1,55 +1,53 @@
-import express from "express";
-import { ApiErrorResponse } from "@common/Api/Api";
-import { KeyValue } from "../Core/KeyValue";
+import { KeyValue } from "@/Core/KeyValue";
+import type { ApiErrorResponse } from "@common/Api/Api";
+import type express from "express";
 
 export function GetAllKeyValues(req: express.Request, res: express.Response) {
-
-    res.send({
+    res.api(200, {
         status: "OK",
-        data: KeyValue.getInstance().getAll(),
+        data: KeyValue.getInstance().getAllRaw(),
     });
-
 }
 
 export function GetKeyValue(req: express.Request, res: express.Response): void {
-
-    if (!KeyValue.getInstance().has(req.params.key)){
-        res.status(404).send({
+    if (!KeyValue.getInstance().has(req.params.key)) {
+        res.api(404, {
             status: "ERROR",
             message: "Key not found.",
         } as ApiErrorResponse);
         return;
     }
 
-    res.send({
+    res.api(200, {
         status: "OK",
-        data: KeyValue.getInstance().get(req.params.key),
+        data: KeyValue.getInstance().getRaw(req.params.key),
     });
-
 }
 
 export function SetKeyValue(req: express.Request, res: express.Response): void {
+    const value = req.body.value as string;
 
-    if (!req.body.value) {
-        res.status(400).send({
+    if (!value) {
+        res.api(400, {
             status: "ERROR",
             message: "No value provided.",
         } as ApiErrorResponse);
         return;
     }
 
-    KeyValue.getInstance().set(req.params.key, req.body.value);
+    KeyValue.getInstance().set(req.params.key, value);
 
-    res.send({
+    res.api(200, {
         status: "OK",
     });
-
 }
 
-export function DeleteKeyValue(req: express.Request, res: express.Response): void {
-
-    if (!KeyValue.getInstance().has(req.params.key)){
-        res.status(404).send({
+export function DeleteKeyValue(
+    req: express.Request,
+    res: express.Response
+): void {
+    if (!KeyValue.getInstance().has(req.params.key)) {
+        res.api(404, {
             status: "ERROR",
             message: "Key not found.",
         } as ApiErrorResponse);
@@ -58,18 +56,18 @@ export function DeleteKeyValue(req: express.Request, res: express.Response): voi
 
     KeyValue.getInstance().delete(req.params.key);
 
-    res.send({
+    res.api(200, {
         status: "OK",
     });
-
 }
 
-export function DeleteAllKeyValues(req: express.Request, res: express.Response): void {
-
+export function DeleteAllKeyValues(
+    req: express.Request,
+    res: express.Response
+): void {
     KeyValue.getInstance().deleteAll();
 
-    res.send({
+    res.api(200, {
         status: "OK",
     });
-
 }

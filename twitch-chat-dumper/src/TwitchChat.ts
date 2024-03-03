@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import { WebSocket } from "ws";
 import { TwitchComment, TwitchCommentDumpTD, TwitchCommentMessageFragment, TwitchCommentEmoticons, TwitchCommentUserBadge } from "../../common/Comments";
+import { isValid, parseJSON } from "date-fns";
 
 function getNiceDuration(duration: number) {
     // format 1d 2h 3m 4s
@@ -53,6 +54,7 @@ interface Tags {
     id?: string;
     mod?: "1" | "0"; // number
     "room-id"?: string;
+    "returning-chatter"?: "1" | "0";
     subscriber?: "1" | "0";
     turbo?: "1" | "0";
     "tmi-sent-ts"?: string;
@@ -146,6 +148,11 @@ export class TwitchChat extends EventEmitter {
     public static chalk = new chalk.Instance({ level: 3 });
     public hideAbuseUsers = true;
 
+    public comedyScore = 0;
+
+    public server_motd: string | undefined;
+    public server_motd_start: Date | undefined;
+
     get bannedUserCount() {
         return Object.values(this.users).filter(u => u.ban_date && u.ban_date.getTime() + ((u.ban_duration || 0) * 1000) > Date.now()).length;
     }
@@ -158,8 +165,22 @@ export class TwitchChat extends EventEmitter {
         super();
         this.channel_login = channel_login;
         if (channel_id) this.channel_id = channel_id;
-        if (start_date) this.startDate = new Date(start_date);
+        if (start_date) {
+            TwitchChat.validateDate(start_date);
+            this.startDate = parseJSON(start_date);
+        }
         // this.connect();
+    }
+
+    private static validateDate(date: string) {
+        const parsedDate = parseJSON(date);
+        if (!isValid(parsedDate)) {
+            throw new Error(`Invalid date ${date}`);
+        }
+        console.log(`Date ${date} is valid, parsed to ${parsedDate}. Current date is ${JSON.stringify(new Date())}`);
+        if (parsedDate.getTime() - 60 > Date.now() ) {
+            throw new Error(`Date ${date} is in the future`);
+        }
     }
 
     public connect() {
@@ -278,6 +299,21 @@ export class TwitchChat extends EventEmitter {
                 this.emit("chat", messageClass);
             } else {
                 this.emit("command", messageClass);
+            }
+
+            // match +2 and -2 messages to comedy score
+            if (messageClass.getCommandName() === "PRIVMSG") {
+                const comedyMatch = messageClass.parameters?.match(/(\+|-)(\d+)/);
+                if (comedyMatch) {
+                    const comedyScore = parseInt(comedyMatch[2]);
+                    if (comedyMatch[1] === "+") {
+                        this.comedyScore += comedyScore;
+                    } else {
+                        this.comedyScore -= comedyScore;
+                    }
+                    // console.log(TwitchChat.chalk.green(`Comedy score: ${this.comedyScore}`));
+                    this.emit("comedy", this.comedyScore, comedyScore, messageClass);
+                }
             }
 
             this.emit("message", messageClass);
@@ -579,77 +615,77 @@ export class TwitchChat extends EventEmitter {
         const commandParts = rawCommandComponent.split(" ");
 
         switch (commandParts[0]) {
-        case "JOIN":
-        case "PART":
-        case "NOTICE":
-        case "CLEARCHAT": // user gets banned lol
-        case "HOSTTARGET":
-        case "PRIVMSG":
-            parsedCommand = {
-                command: commandParts[0],
-                channel: commandParts[1],
-            };
-            break;
-        case "USERNOTICE":
-            parsedCommand = {
-                command: commandParts[0],
-            };
-            // console.log("USERNOTICE", commandParts, rawCommandComponent);
-            break;
-        case "PING":
-            parsedCommand = {
-                command: commandParts[0],
-            };
-            break;
-        case "CAP":
-            parsedCommand = {
-                command: commandParts[0],
-                isCapRequestEnabled: (commandParts[2] === "ACK") ? true : false,
-                // The parameters part of the messages contains the 
-                // enabled capabilities.
-            };
-            break;
-        case "GLOBALUSERSTATE":  // Included only if you request the /commands capability.
-            // But it has no meaning without also including the /tags capability.
-            parsedCommand = {
-                command: commandParts[0],
-            };
-            break;
-        case "USERSTATE":   // Included only if you request the /commands capability.
-        case "ROOMSTATE":   // But it has no meaning without also including the /tags capabilities.
-            parsedCommand = {
-                command: commandParts[0],
-                channel: commandParts[1],
-            };
-            break;
-        case "RECONNECT":  
-            console.log("The Twitch IRC server is about to terminate the connection for maintenance.");
-            parsedCommand = {
-                command: commandParts[0],
-            };
-            break;
-        case "421":
-            console.log(`Unsupported IRC command: ${commandParts[2]}`);
-            return undefined;
-        case "001":  // Logged in (successfully authenticated). 
-            parsedCommand = {
-                command: commandParts[0],
-                channel: commandParts[1],
-            };
-            break;
-        case "002":  // Ignoring all other numeric messages.
-        case "003":
-        case "004":
-        case "353":  // Tells you who else is in the chat room you're joining.
-        case "366":
-        case "372":
-        case "375":
-        case "376":
-            console.log(`numeric message: ${commandParts[0]}`);
-            return undefined;
-        default:
-            console.log(`\nUnexpected command: ${commandParts[0]} (${rawCommandComponent}) \n`);
-            return undefined;
+            case "JOIN":
+            case "PART":
+            case "NOTICE":
+            case "CLEARCHAT": // user gets banned lol
+            case "HOSTTARGET":
+            case "PRIVMSG":
+                parsedCommand = {
+                    command: commandParts[0],
+                    channel: commandParts[1],
+                };
+                break;
+            case "USERNOTICE":
+                parsedCommand = {
+                    command: commandParts[0],
+                };
+                // console.log("USERNOTICE", commandParts, rawCommandComponent);
+                break;
+            case "PING":
+                parsedCommand = {
+                    command: commandParts[0],
+                };
+                break;
+            case "CAP":
+                parsedCommand = {
+                    command: commandParts[0],
+                    isCapRequestEnabled: (commandParts[2] === "ACK") ? true : false,
+                    // The parameters part of the messages contains the 
+                    // enabled capabilities.
+                };
+                break;
+            case "GLOBALUSERSTATE":  // Included only if you request the /commands capability.
+                // But it has no meaning without also including the /tags capability.
+                parsedCommand = {
+                    command: commandParts[0],
+                };
+                break;
+            case "USERSTATE":   // Included only if you request the /commands capability.
+            case "ROOMSTATE":   // But it has no meaning without also including the /tags capabilities.
+                parsedCommand = {
+                    command: commandParts[0],
+                    channel: commandParts[1],
+                };
+                break;
+            case "RECONNECT":
+                console.log("The Twitch IRC server is about to terminate the connection for maintenance.");
+                parsedCommand = {
+                    command: commandParts[0],
+                };
+                break;
+            case "421":
+                console.log(`Unsupported IRC command: ${commandParts[2]}`);
+                return undefined;
+            case "001":  // Logged in (successfully authenticated). 
+                parsedCommand = {
+                    command: commandParts[0],
+                    channel: commandParts[1],
+                };
+                break;
+            case "002": // Ignoring all other numeric messages.
+            case "003": // Ignoring all other numeric messages.
+            case "004": // Logged in (successfully authenticated).
+            case "353": // Tells you who else is in the chat room you're joining.
+            case "366": // End of /NAMES list.
+            case "372": // MOTD (message of the day).
+            case "375": // Start of MOTD.
+            case "376": // End of MOTD.
+                console.log(`numeric message: ${commandParts[0]}`);
+                return undefined;
+            default:
+                console.log(`\nUnexpected command: ${commandParts[0]} (${rawCommandComponent}) \n`);
+                return undefined;
         }
 
         return parsedCommand;
@@ -669,14 +705,14 @@ export class TwitchChat extends EventEmitter {
 
     parseParameters(rawParametersComponent: string, command: Command): Command {
         const idx = 0;
-        const commandParts = rawParametersComponent.slice(idx + 1).trim(); 
+        const commandParts = rawParametersComponent.slice(idx + 1).trim();
         const paramsIdx = commandParts.indexOf(" ");
 
         if (-1 == paramsIdx) { // no parameters
-            command.botCommand = commandParts.slice(0); 
+            command.botCommand = commandParts.slice(0);
         }
         else {
-            command.botCommand = commandParts.slice(0, paramsIdx); 
+            command.botCommand = commandParts.slice(0, paramsIdx);
             command.botCommandParams = commandParts.slice(paramsIdx).trim();
             // TODO: remove extra spaces in parameters string
         }
@@ -690,6 +726,10 @@ export class TwitchChat extends EventEmitter {
             throw new Error("messageToDump: message.parameters is undefined");
         }
 
+        if (offset_seconds === undefined || offset_seconds === null) {
+            throw new Error("messageToDump: offset_seconds is undefined");
+        }
+
         const emoticons: TwitchCommentEmoticons[] = [];
         if (message.getTag('emotes')) {
             for (const emote in message.tags.emotes) {
@@ -697,7 +737,7 @@ export class TwitchChat extends EventEmitter {
                     emoticons.push({
                         _id: emote,
                         begin: parseInt(pos.startPosition),
-                        end: parseInt(pos.endPosition),
+                        end: parseInt(pos.endPosition) + 1, // 2023-11-02 - for some reason the end position is off by 1 now
                     });
                 }
             }
@@ -728,66 +768,6 @@ export class TwitchChat extends EventEmitter {
                 emoticon: null,
             });
         }
-
-        /*
-        const words = message.parameters.split(" ");
-
-        for (let i = 0; i < words.length; i++) {
-            const word = words[i];
-            const fragment: TwitchCommentMessageFragment = {
-                "text": word,
-                "emoticon": null,
-            };
-
-            if (emoticons.length > 0) {
-                // find emoticon based on entire message text position
-                // i in this case is the word index, not the character index
-                const emoticon = emoticons.find(e => e.begin <= i && e.end >= i);
-                if (emoticon) {
-                    fragment.emoticon = {
-                        emoticon_id: emoticon._id,
-                        // emoticon_set_id: message.tags["emote-sets"][0],
-                    };
-                } else {
-                    console.debug(`No emoticon found for word ${word}`);
-                }
-            }
-
-            fragments.push(fragment);
-        }
-        */
-
-        // console.debug(`Got ${fragments.length} fragments`, fragments);
-
-        // merge fragments with only text
-        /*
-        const mergedFragments: TwitchCommentMessageFragment[] = [];
-        let currentFragment: TwitchCommentMessageFragment | undefined = undefined;
-        for (let i = 0; i < fragments.length; i++) {
-            const fragment = fragments[i];
-            if (fragment.emoticon) {
-                if (currentFragment) {
-                    mergedFragments.push(currentFragment);
-                }
-                currentFragment = undefined;
-                mergedFragments.push(fragment);
-            } else {
-                if (!currentFragment) {
-                    currentFragment = {
-                        text: fragment.text,
-                        emoticon: null,
-                    };
-                } else {
-                    currentFragment.text += " " + fragment.text;
-                }
-            }
-        }
-        if (currentFragment) {
-            mergedFragments.push(currentFragment);
-        }
-
-        console.debug(`Merged ${fragments.length} fragments to ${mergedFragments.length}`);
-        */
 
         const badges: TwitchCommentUserBadge[] = [];
         if (message.tags?.badges) {
@@ -821,7 +801,7 @@ export class TwitchChat extends EventEmitter {
                 display_name: message.tags?.["display-name"] || message.source?.nick || "",
                 logo: "",
                 name: message.source?.nick || "",
-                type: "user",
+                // type: "user",
                 updated_at: (message.date || new Date()).toISOString(),
             },
             message: {
@@ -830,13 +810,13 @@ export class TwitchChat extends EventEmitter {
                 fragments: fragments,
                 user_badges: badges || null,
                 user_color: message.tags?.color || "#FFFFFF",
-                is_action: message.isAction || false,
+                // is_action: message.isAction || false,
             },
             created_at: (message.date || new Date()).toISOString(),
-            source: "chat",
-            state: "published",
-            updated_at: (message.date || new Date()).toISOString(),
-            more_replies: false,
+            // source: "chat",
+            // state: "published",
+            // updated_at: (message.date || new Date()).toISOString(),
+            // more_replies: false,
         };
     }
 
@@ -845,7 +825,7 @@ export class TwitchChat extends EventEmitter {
             throw new Error("Dump already started");
         }
         if (fs.existsSync(filename)) {
-            throw new Error(`File ${filename} already exists`);
+            throw new Error(`EEXIST: File ${filename} already exists`);
         }
         this.dumpFilename = filename;
         this.dumpStream = fs.createWriteStream(`${this.dumpFilename}.line`, { flags: "a" });
@@ -865,26 +845,31 @@ export class TwitchChat extends EventEmitter {
                 video: {
                     created_at: this.dumpStart.toISOString(),
                     description: "",
-                    duration: twitchDuration(Math.round((new Date().getTime() - this.dumpStart.getTime()) / 1000)),
+                    // duration: twitchDuration(Math.round((new Date().getTime() - this.dumpStart.getTime()) / 1000)),
                     id: "",
-                    language: "",
-                    published_at: this.dumpStart.toISOString(),
-                    thumbnail_url: "",
+                    // language: "",
+                    // published_at: this.dumpStart.toISOString(),
+                    // thumbnail_url: "",
                     title: "Chat Dump",
-                    type: "archive",
-                    url: "",
-                    user_id: this.channel_id,
-                    user_name: this.channel_login,
-                    view_count: 0,
-                    viewable: "",
+                    // type: "archive",
+                    // url: "",
+                    // user_id: this.channel_id,
+                    // user_name: this.channel_login,
+                    // view_count: 0,
+                    // viewable: "",
 
                     start: 0,
                     end: (new Date().getTime() - this.dumpStart.getTime()) / 1000,
+                    length: (new Date().getTime() - this.dumpStart.getTime()) / 1000,
+                    viewCount: 0,
+                    game: "",
+                    chapters: [],
                 },
                 streamer: {
                     name: this.channel_login,
                     id: parseInt(this.channel_id),
                 },
+                embeddedData: null,
             };
             fs.writeFileSync(this.dumpFilename, JSON.stringify(finalDump));
             fs.unlinkSync(this.dumpStream.path);
@@ -1139,4 +1124,13 @@ export declare interface TwitchChat {
     on(event: "connected", listener: () => void): this;
 
     on(event: "pong", listener: () => void): this;
+
+    /**
+     * Comedy score. In some chats such as jerma985 and Vinesauce, chat members have started to use +2 and -2 etc to grade jokes.
+     * This event will be emitted when a message contains a score, and the total score and delta score will be emitted.
+     * @param event 
+     * @param listener 
+     */
+
+    on(event: "comedy", listener: (totalScore: number, deltaScore: number, message: TwitchMessage) => void): this;
 }

@@ -46,15 +46,16 @@ export const TwitchChannelData: UserData = {
     created_at: "",
 
     _updated: 1605849081,
-    cache_avatar: "",
+    avatar_cache: "",
+    avatar_thumb: "",
     cache_offline_image: "",
 };
 
 export const MockApiChannelData: ApiTwitchChannel = {
     uuid: "uuid",
-    userid: "123",
-    display_name: "test",
-    login: "test",
+    // userid: "123", // deprecated
+    // display_name: "Test", // deprecated
+    // login: "test", // deprecated
     description: "test",
     quality: [],
     vods_raw: [],
@@ -84,9 +85,9 @@ export const MockApiChannelData: ApiTwitchChannel = {
     download_vod_at_end_quality: "best",
     video_list: [],
     provider: "twitch",
-    displayName: "",
-    internalName: "",
-    internalId: "",
+    displayName: "Test",
+    internalName: "test",
+    internalId: "123",
     url: "",
     profilePictureUrl: ""
 };
@@ -96,9 +97,6 @@ export const MockApiVODData: ApiTwitchVod = {
     stream_title: "",
     segments: [],
     segments_raw: [],
-    streamer_name: "",
-    streamer_id: "",
-    streamer_login: "",
     started_at: "",
     is_capturing: false,
     is_converting: false,

@@ -1,18 +1,17 @@
-import { ApiVodSegment } from "@common/Api/Client";
+import type { ApiVodSegment } from "@common/Api/Client";
 
 export class BaseVODSegment {
-    filename: string | undefined;
-    basename: string | undefined;
+    public filename: string | undefined;
+    public basename: string | undefined;
     // strings: Record<string, string> = {};
-    filesize: number | undefined;
-    deleted = false;
+    public filesize: number | undefined;
+    public deleted = false;
 
-    toAPI(): ApiVodSegment {
+    public toAPI(): ApiVodSegment {
         return {
             basename: this.basename || "",
             filesize: this.filesize || 0,
             deleted: this.deleted,
         };
     }
-
 }
