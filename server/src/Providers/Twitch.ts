@@ -1,11 +1,13 @@
 import { BaseConfigCacheFolder, BaseConfigDataFolder } from "@/Core/BaseConfig";
 import { Config } from "@/Core/Config";
+import { Helper } from "@/Core/Helper";
 import { KeyValue } from "@/Core/KeyValue";
 import { LiveStreamDVR } from "@/Core/LiveStreamDVR";
 import { LOGLEVEL, censoredLogWords, log } from "@/Core/Log";
 import type { AutomatorMetadata } from "@/Core/Providers/Twitch/TwitchAutomator";
 import { TwitchAutomator } from "@/Core/Providers/Twitch/TwitchAutomator";
 import { TwitchChannel } from "@/Core/Providers/Twitch/TwitchChannel";
+import { execSimple } from "@/Helpers/Execute";
 import { getNiceDuration } from "@/Helpers/Format";
 import { xClearTimeout, xTimeout } from "@/Helpers/Timeout";
 import type { TwitchCommentDumpTD } from "@common/Comments";
@@ -1501,6 +1503,52 @@ export class TwitchHelper {
             TwitchHelper.clearAccessToken();
             return false;
         }
+    }
+
+    public static async checkTTVLolPlugin() {
+        const bin = Helper.path_streamlink();
+
+        if (!bin) {
+            throw new Error("Streamlink binary not found");
+        }
+
+        const args = [
+            "--plugin-dir",
+            BaseConfigDataFolder.streamlink_plugins,
+            "--twitch-proxy-playlist",
+        ];
+
+        let execReturn;
+
+        try {
+            execReturn = await execSimple(
+                bin,
+                args,
+                "streamlink ttv lol plugin check"
+            );
+        } catch (error) {
+            log(
+                LOGLEVEL.ERROR,
+                "tw.helper.checkTTVLolPlugin",
+                `Error checking streamlink ttv lol plugin: ${
+                    (error as Error).message
+                }`,
+                error
+            );
+
+            return false;
+        }
+
+        const fullLog =
+            execReturn.stdout.join("\n") + "\n" + execReturn.stderr.join("\n");
+
+        if (
+            fullLog.includes("unrecognized arguments: --twitch-proxy-playlist")
+        ) {
+            return false;
+        }
+
+        return true;
     }
 }
 

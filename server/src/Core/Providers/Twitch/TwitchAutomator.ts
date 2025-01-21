@@ -16,6 +16,7 @@ import { BaseAutomator } from "../Base/BaseAutomator";
 import { TwitchChannel } from "./TwitchChannel";
 import { TwitchVOD } from "./TwitchVOD";
 import { TwitchVODChapter } from "./TwitchVODChapter";
+import { LiveStreamDVR } from "@/Core/LiveStreamDVR";
 
 export interface AutomatorMetadata {
     message_id: string;
@@ -713,8 +714,8 @@ export class TwitchAutomator extends BaseAutomator {
         }
 
         // streamlink-ttvlol plugin
-        if (Config.getInstance().cfg("capture.twitch-ttv-lol-plugin")) {
-            cmd.push("--plugin-dirs", BaseConfigDataFolder.streamlink_plugins);
+        if (Config.getInstance().cfg("capture.twitch-ttv-lol-plugin") && LiveStreamDVR.ttvLolPluginAvailable) {
+            cmd.push("--plugin-dir", BaseConfigDataFolder.streamlink_plugins);
 
             if (
                 Config.getInstance().hasValue("capture.twitch-proxy-playlist")

@@ -186,6 +186,8 @@ export class LiveStreamDVR {
 
         await LiveStreamDVR.checkBinaryVersions();
 
+        await LiveStreamDVR.checkTTVLolPlugin();
+
         // monitor for program exit
         // let saidGoobye = false;
         // const goodbye = () => {
@@ -841,10 +843,16 @@ export class LiveStreamDVR {
         if (!Helper.path_mediainfo()) errors.push("Failed to find mediainfo");
 
         for (const key in Config.settingsFields) {
-            const field = Config.settingsFields[key];
+            const field = Config.getSettingField(
+                key as keyof typeof Config.settingsFields
+            );
             if (
+                field !== undefined &&
+                "deprecated" in field &&
                 field.deprecated &&
-                Config.getInstance().cfg(key) !== field.default
+                Config.getInstance().cfg(
+                    key as keyof typeof Config.settingsFields
+                ) !== field.default
             ) {
                 if (typeof field.deprecated === "string") {
                     errors.push(`${key} is deprecated: ${field.deprecated}`);
@@ -967,16 +975,27 @@ export class LiveStreamDVR {
         }
 
         // check for ts files in storage
-        const files = readdirRecursive(BaseConfigDataFolder.storage);
-        for (const file of files) {
-            if (file.endsWith(".ts")) {
-                errors.push(
-                    `Found ts file in storage folder: ${path.join(
-                        BaseConfigDataFolder.storage,
-                        file
-                    )}`
-                );
+        for (const channel of this.getInstance().getChannels()) {
+            if (channel.is_capturing) continue; // skip currently capturing channels
+            const basePath = channel.getFolder();
+            const files = readdirRecursive(basePath);
+            for (const file of files) {
+                if (file.endsWith(".ts")) {
+                    errors.push(
+                        `Found ts file in channel folder: ${path.join(
+                            basePath,
+                            file
+                        )}`
+                    );
+                }
             }
+        }
+
+        if (
+            Config.getInstance().cfg("capture.twitch-ttv-lol-plugin") &&
+            !this.ttvLolPluginAvailable
+        ) {
+            errors.push("Twitch TTV LOL plugin is enabled but not available.");
         }
 
         return errors;
@@ -1060,6 +1079,14 @@ export class LiveStreamDVR {
                 }
             }
         }
+    }
+
+    public static ttvLolPluginAvailable = false;
+    public static async checkTTVLolPlugin() {
+        if (!Config.getInstance().cfg("capture.twitch-ttv-lol-plugin"))
+            return false; // not enabled
+        this.ttvLolPluginAvailable = await TwitchHelper.checkTTVLolPlugin();
+        return this.ttvLolPluginAvailable;
     }
 
     public static async checkPythonVirtualEnv() {
